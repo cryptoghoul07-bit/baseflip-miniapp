@@ -1,0 +1,223 @@
+.poolDisplay {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 30px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-xl);
+    border: 1px solid var(--border-glow);
+}
+
+.pool {
+    flex: 1;
+    padding: 28px;
+    border-radius: var(--border-radius-lg);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.pool::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.poolA {
+    background: linear-gradient(135deg, rgba(0, 82, 255, 0.15) 0%, rgba(0, 82, 255, 0.05) 100%);
+    border: 2px solid rgba(0, 82, 255, 0.4);
+}
+
+.poolA::before {
+    background: var(--gradient-blue);
+}
+
+.poolA:hover {
+    box-shadow: var(--glow-blue);
+    border-color: var(--base-blue);
+}
+
+.poolB {
+    background: linear-gradient(135deg, rgba(255, 0, 128, 0.15) 0%, rgba(255, 0, 128, 0.05) 100%);
+    border: 2px solid rgba(255, 0, 128, 0.4);
+}
+
+.poolB::before {
+    background: var(--gradient-pink);
+}
+
+.poolB:hover {
+    box-shadow: var(--glow-pink);
+    border-color: var(--hot-pink);
+}
+
+.pool.userPool {
+    border-width: 3px;
+    animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.poolA.userPool {
+    box-shadow: var(--glow-blue);
+    border-color: var(--base-blue);
+}
+
+.poolB.userPool {
+    box-shadow: var(--glow-pink);
+    border-color: var(--hot-pink);
+}
+
+.poolHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.poolHeader h3 {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.poolA .poolHeader h3 {
+    color: var(--base-blue);
+}
+
+.poolB .poolHeader h3 {
+    color: var(--hot-pink);
+}
+
+.badge {
+    background: var(--gradient-gold);
+    color: #000;
+    padding: 6px 14px;
+    border-radius: var(--border-radius-xl);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: var(--glow-gold);
+}
+
+.poolAmount {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--text-primary);
+}
+
+.eth {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.progressBar {
+    height: 14px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 7px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progressFill {
+    height: 100%;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 7px;
+    position: relative;
+}
+
+.progressFill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+    animation: shimmer 2s infinite;
+    background-size: 200% 100%;
+}
+
+.poolA .progressFill {
+    background: var(--gradient-blue);
+    box-shadow: 0 0 15px rgba(0, 82, 255, 0.5);
+}
+
+.poolB .progressFill {
+    background: var(--gradient-pink);
+    box-shadow: 0 0 15px rgba(255, 0, 128, 0.5);
+}
+
+.target {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-align: center;
+    font-weight: 500;
+}
+
+.vs {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: var(--glow-cyan);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@media (max-width: 768px) {
+    .poolDisplay {
+        flex-direction: column;
+        gap: 24px;
+        padding: 20px;
+    }
+
+    .vs {
+        transform: rotate(90deg);
+        padding: 10px 0;
+    }
+
+    .poolAmount {
+        font-size: 2rem;
+    }
+
+    .poolHeader h3 {
+        font-size: 1.2rem;
+    }
+}

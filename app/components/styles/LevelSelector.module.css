@@ -1,0 +1,152 @@
+.levelSelector {
+    margin-bottom: 40px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 24px;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.levels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.levelCard {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 2px solid var(--border-glow);
+    border-radius: var(--border-radius-lg);
+    padding: 28px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.levelCard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-blue);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.levelCard:hover:not(.locked)::before {
+    opacity: 1;
+}
+
+.levelCard:hover:not(.locked) {
+    transform: translateY(-6px);
+    border-color: var(--base-blue);
+    box-shadow: var(--glow-blue);
+}
+
+.levelCard.selected {
+    border-color: var(--neon-cyan);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 82, 255, 0.1) 100%);
+    box-shadow: var(--glow-cyan);
+}
+
+.levelCard.selected::before {
+    opacity: 1;
+    background: var(--neon-cyan);
+}
+
+.levelCard.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(50%);
+}
+
+.levelCard.locked:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.levelIcon {
+    font-size: 2.5rem;
+    margin-bottom: 12px;
+}
+
+.levelNumber {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: var(--gradient-blue);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.levelCard.selected .levelNumber {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--base-blue));
+    -webkit-background-clip: text;
+    background-clip: text;
+}
+
+.poolSize {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.stakeRange {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.comingSoon {
+    margin-top: 14px;
+    padding: 8px 16px;
+    background: rgba(100, 100, 100, 0.3);
+    color: var(--text-muted);
+    border-radius: var(--border-radius-md);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-block;
+}
+
+@media (max-width: 768px) {
+    .levels {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .levelCard {
+        padding: 24px 16px;
+    }
+
+    .levelIcon {
+        font-size: 2rem;
+    }
+
+    .levelNumber {
+        font-size: 1.1rem;
+    }
+
+    .poolSize {
+        font-size: 1.3rem;
+    }
+}

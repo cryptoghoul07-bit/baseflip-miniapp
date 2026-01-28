@@ -1,0 +1,105 @@
+.feedContainer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 320px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--border-radius-lg);
+    padding: 16px;
+    z-index: 1000;
+    box-shadow: var(--glow-blue);
+    animation: slideIn 0.5s ease-out;
+}
+
+.feedContainer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--gradient-gold);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.feedTitle {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: var(--glow-gold);
+}
+
+.feedList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.feedItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: var(--border-radius-md);
+    animation: fadeIn 0.4s ease-out;
+}
+
+.user {
+    color: var(--text-secondary);
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+
+.action {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin: 0 8px;
+}
+
+.amount {
+    color: var(--neon-cyan);
+    font-weight: 700;
+    text-shadow: var(--glow-cyan);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .feedContainer {
+        bottom: 80px;
+        right: 12px;
+        left: 12px;
+        width: auto;
+    }
+}

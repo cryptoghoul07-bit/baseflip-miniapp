@@ -1,0 +1,317 @@
+.leaderboardContainer {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.airdropBanner {
+    background: var(--gradient-gold);
+    border-radius: var(--border-radius-xl);
+    padding: 28px;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    box-shadow: var(--glow-gold);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: var(--glow-gold);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+    }
+}
+
+.airdropIcon {
+    font-size: 3.5rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-12px);
+    }
+}
+
+.airdropText h3 {
+    margin: 0;
+    color: #000;
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.airdropText p {
+    margin: 10px 0 0 0;
+    color: rgba(0, 0, 0, 0.8);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.leaderboardHeader {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.leaderboardHeader h2 {
+    font-family: var(--font-display);
+    font-size: 2.8rem;
+    background: var(--gradient-blue);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.leaderboardHeader p {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    background: var(--bg-card);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--border-glow);
+}
+
+.leaderboardList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.leaderboardRow {
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--border-radius-lg);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    transition: all 0.3s ease;
+}
+
+.leaderboardRow:hover {
+    background: var(--bg-card-hover);
+    transform: translateX(6px);
+    border-color: var(--base-blue);
+}
+
+.topThree {
+    background: linear-gradient(135deg, rgba(0, 82, 255, 0.15) 0%, rgba(0, 212, 255, 0.1) 100%);
+    border: 2px solid rgba(0, 82, 255, 0.4);
+}
+
+.topThree:hover {
+    box-shadow: var(--glow-blue);
+}
+
+.currentUser {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 82, 255, 0.15) 100%);
+    border: 2px solid var(--neon-cyan);
+    box-shadow: var(--glow-cyan);
+}
+
+.rank {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 800;
+    min-width: 55px;
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.address {
+    flex: 1;
+    font-family: monospace;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.youBadge {
+    background: var(--gradient-blue);
+    color: #fff;
+    padding: 5px 14px;
+    border-radius: var(--border-radius-xl);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: var(--font-body);
+    box-shadow: var(--glow-blue);
+}
+
+.points {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--gold);
+    min-width: 110px;
+    text-align: right;
+    text-shadow: var(--glow-gold);
+}
+
+/* Rules Section Styles */
+.rulesSection {
+    margin-top: 48px;
+    padding: 32px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--border-radius-xl);
+    backdrop-filter: blur(20px);
+}
+
+.rulesSection h3 {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    color: var(--text-primary);
+    margin: 0 0 24px 0;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.rulesList {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.ruleItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+    background: rgba(0, 82, 255, 0.05);
+    border-left: 3px solid var(--base-blue);
+    border-radius: var(--border-radius-lg);
+    transition: all 0.3s ease;
+}
+
+.ruleItem:hover {
+    background: rgba(0, 82, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.ruleIcon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.ruleContent {
+    flex: 1;
+}
+
+.ruleContent strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.ruleContent p {
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.rulesNote {
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 82, 255, 0.05) 100%);
+    border-radius: var(--border-radius-lg);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.rulesNote p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.rulesNote strong {
+    color: var(--neon-cyan);
+}
+
+@media (max-width: 768px) {
+    .airdropBanner {
+        flex-direction: column;
+        text-align: center;
+        padding: 24px 20px;
+    }
+
+    .airdropText h3 {
+        font-size: 1.2rem;
+    }
+
+    .leaderboardHeader h2 {
+        font-size: 2rem;
+    }
+
+    .rank {
+        min-width: 45px;
+        font-size: 1.3rem;
+    }
+
+    .points {
+        font-size: 1rem;
+        min-width: 90px;
+    }
+
+    .leaderboardRow {
+        padding: 14px 18px;
+    }
+
+    .rulesSection {
+        margin-top: 32px;
+        padding: 24px;
+    }
+
+    .rulesSection h3 {
+        font-size: 1.5rem;
+    }
+
+    .ruleItem {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .ruleIcon {
+        font-size: 1.5rem;
+    }
+
+    .ruleContent strong {
+        font-size: 1rem;
+    }
+
+    .ruleContent p {
+        font-size: 0.9rem;
+    }
+}

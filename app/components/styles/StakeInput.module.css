@@ -1,0 +1,247 @@
+.stakeInput {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 32px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-xl);
+    border: 1px solid var(--border-glow);
+    position: relative;
+}
+
+.stakeInput::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-gold);
+    border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 28px;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.groupSelector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.groupButton {
+    padding: 24px;
+    border-radius: var(--border-radius-lg);
+    border: 2px solid;
+    background: rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.groupA {
+    border-color: rgba(0, 82, 255, 0.4);
+}
+
+.groupA:hover:not(.disabled) {
+    background: rgba(0, 82, 255, 0.15);
+    border-color: var(--base-blue);
+    box-shadow: var(--glow-blue);
+}
+
+.groupA.selected {
+    background: linear-gradient(135deg, rgba(0, 82, 255, 0.25) 0%, rgba(0, 82, 255, 0.1) 100%);
+    border-color: var(--base-blue);
+    color: var(--base-blue);
+    box-shadow: var(--glow-blue);
+}
+
+.groupB {
+    border-color: rgba(255, 0, 128, 0.4);
+}
+
+.groupB:hover:not(.disabled) {
+    background: rgba(255, 0, 128, 0.15);
+    border-color: var(--hot-pink);
+    box-shadow: var(--glow-pink);
+}
+
+.groupB.selected {
+    background: linear-gradient(135deg, rgba(255, 0, 128, 0.25) 0%, rgba(255, 0, 128, 0.1) 100%);
+    border-color: var(--hot-pink);
+    color: var(--hot-pink);
+    box-shadow: var(--glow-pink);
+}
+
+.groupButton.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.groupLabel {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.lockedText {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.amountInput {
+    margin-bottom: 24px;
+}
+
+.label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.range {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.input {
+    width: 100%;
+    padding: 18px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid var(--border-glow);
+    border-radius: var(--border-radius-md);
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--base-blue);
+    box-shadow: 0 0 0 4px rgba(0, 82, 255, 0.15);
+}
+
+.input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.input::placeholder {
+    color: var(--text-muted);
+}
+
+.error {
+    color: #ef4444;
+    font-size: 0.9rem;
+    margin-top: 10px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.error::before {
+    content: '⚠️';
+}
+
+.multiplier {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 212, 255, 0.05) 100%);
+    border: 2px solid rgba(0, 212, 255, 0.3);
+    padding: 18px;
+    border-radius: var(--border-radius-md);
+    text-align: center;
+    margin-bottom: 24px;
+    color: var(--text-secondary);
+}
+
+.multiplier strong {
+    color: var(--neon-cyan);
+    font-size: 1.4rem;
+    font-weight: 800;
+    text-shadow: var(--glow-cyan);
+}
+
+.multiplierDetail {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.stakeButton {
+    width: 100%;
+    padding: 20px;
+    background: var(--gradient-gold);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    color: #000;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    box-shadow: var(--glow-gold);
+}
+
+.stakeButton:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+}
+
+.stakeButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.alreadyStaked {
+    text-align: center;
+    padding: 28px;
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 82, 255, 0.1) 100%);
+    border: 2px solid var(--base-blue);
+    border-radius: var(--border-radius-lg);
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    font-weight: 700;
+    box-shadow: var(--glow-blue);
+}
+
+@media (max-width: 640px) {
+    .stakeInput {
+        padding: 24px 20px;
+    }
+
+    .groupSelector {
+        grid-template-columns: 1fr;
+    }
+
+    .groupLabel {
+        font-size: 1.1rem;
+    }
+
+    .stakeButton {
+        padding: 16px;
+        font-size: 1rem;
+    }
+}

@@ -1,0 +1,166 @@
+.adminPanel {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--gold);
+    border-radius: var(--border-radius-lg);
+    padding: 16px;
+    z-index: 900;
+    width: 260px;
+    box-shadow: var(--glow-gold);
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.header h3 {
+    margin: 0 0 12px 0;
+    color: var(--gold);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    padding-bottom: 8px;
+}
+
+.stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.statLabel {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.statValue {
+    color: #fff;
+    font-family: monospace;
+    font-weight: 700;
+}
+
+.withdrawButton {
+    width: 100%;
+    background: var(--gradient-gold);
+    border: none;
+    border-radius: var(--border-radius-md);
+    padding: 8px;
+    color: #000;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.withdrawButton:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}
+
+.withdrawButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.success {
+    margin-top: 8px;
+    color: var(--neon-cyan);
+    font-size: 0.75rem;
+    text-align: center;
+}
+
+.txHash {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: center;
+    font-family: monospace;
+}
+
+.header h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.closeButton {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.closeButton:hover {
+    color: var(--gold);
+}
+
+.minimizeButton {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 900;
+    box-shadow: var(--glow-gold);
+    backdrop-filter: blur(16px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.minimizeButton:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@media (max-width: 768px) {
+    .adminPanel {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        bottom: 12px;
+        max-width: none;
+    }
+
+    .minimizeButton {
+        bottom: 12px;
+        left: 12px;
+    }
+}

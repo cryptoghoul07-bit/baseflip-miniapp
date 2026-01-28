@@ -1,120 +1,199 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useQuickAuth,useMiniKit } from "@coinbase/onchainkit/minikit";
-import { useRouter } from "next/navigation";
-import { minikitConfig } from "../minikit.config";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import {
+  ConnectWallet,
+  Wallet,
+  WalletDropdown,
+  WalletDropdownDisconnect
+} from "@coinbase/onchainkit/wallet";
+import {
+  Address,
+  Avatar,
+  Name,
+  Identity,
+} from "@coinbase/onchainkit/identity";
+import { useAccount } from "wagmi";
+import { useBaseFlip } from "./hooks/useBaseFlip";
+import LevelSelector from "./components/LevelSelector";
+import PoolDisplay from "./components/PoolDisplay";
+import StakeInput from "./components/StakeInput";
+import WinnersFeed from "./components/WinnersFeed";
+import AdminPanel from "./components/AdminPanel";
 import styles from "./page.module.css";
 
-interface AuthResponse {
-  success: boolean;
-  user?: {
-    fid: number; // FID is the unique identifier for the user
-    issuedAt?: number;
-    expiresAt?: number;
-  };
-  message?: string; // Error messages come as 'message' not 'error'
-}
-
-
 export default function Home() {
-  const { isFrameReady, setFrameReady, context } = useMiniKit();
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
-  const router = useRouter();
+  const { isFrameReady, setFrameReady } = useMiniKit();
+  const [selectedLevel, setSelectedLevel] = useState(1);
+  const [mounted, setMounted] = useState(false);
+  const { address, isConnected } = useAccount();
+  const { roundData, userStake, stake, isStaking, refetchRound, unclaimedRound, claimWinnings, isClaiming, lastWinner } = useBaseFlip();
 
-  // Initialize the  miniapp
+  // Initialize the miniapp
   useEffect(() => {
     if (!isFrameReady) {
       setFrameReady();
     }
   }, [setFrameReady, isFrameReady]);
- 
-  
 
-  // If you need to verify the user's identity, you can use the useQuickAuth hook.
-  // This hook will verify the user's signature and return the user's FID. You can update
-  // this to meet your needs. See the /app/api/auth/route.ts file for more details.
-  // Note: If you don't need to verify the user's identity, you can get their FID and other user data
-  // via `context.user.fid`.
-  // const { data, isLoading, error } = useQuickAuth<{
-  //   userFid: string;
-  // }>("/api/auth");
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  const { data: authData, isLoading: isAuthLoading, error: authError } = useQuickAuth<AuthResponse>(
-    "/api/auth",
-    { method: "GET" }
-  );
-
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const handleStake = async (group: 1 | 2, amount: string) => {
+    try {
+      await stake(group, amount);
+      setTimeout(() => {
+        refetchRound();
+      }, 2000);
+    } catch (error) {
+      console.error('Stake failed:', error);
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    // Check authentication first
-    if (isAuthLoading) {
-      setError("Please wait while we verify your identity...");
-      return;
+  // Get min/max stakes for current level
+  const getLevelLimits = (levelId: number) => {
+    switch (levelId) {
+      case 1:
+        return { min: 0.001, max: 0.05 };
+      case 2:
+        return { min: 0.005, max: 0.25 };
+      case 3:
+        return { min: 0.01, max: 0.5 };
+      default:
+        return { min: 0.001, max: 0.05 };
     }
-
-    if (authError || !authData?.success) {
-      setError("Please authenticate to join the waitlist");
-      return;
-    }
-
-    if (!email) {
-      setError("Please enter your email address");
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    // TODO: Save email to database/API with user FID
-    console.log("Valid email submitted:", email);
-    console.log("User authenticated:", authData.user);
-    
-    // Navigate to success page
-    router.push("/success");
   };
+
+  const limits = getLevelLimits(selectedLevel);
+  const userGroup = userStake?.amount && userStake.amount > 0n ? userStake.group : null;
+  const hasStaked = userStake?.amount ? userStake.amount > 0n : false;
 
   return (
     <div className={styles.container}>
-      <button className={styles.closeButton} type="button">
-        ✕
-      </button>
-      
-      <div className={styles.content}>
-        <div className={styles.waitlistForm}>
-          <h1 className={styles.title}>Join {minikitConfig.miniapp.name.toUpperCase()}</h1>
-          
-          <p className={styles.subtitle}>
-             Hey {context?.user?.displayName || "there"}, Get early access and be the first to experience the future of<br />
-            crypto marketing strategy.
-          </p>
-
-          <form onSubmit={handleSubmit} className={styles.form}>
-            <input
-              type="email"
-              placeholder="Your amazing email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={styles.emailInput}
-            />
-            
-            {error && <p className={styles.error}>{error}</p>}
-            
-            <button type="submit" className={styles.joinButton}>
-              JOIN WAITLIST
-            </button>
-          </form>
+      <div className={styles.header}>
+        <div className={styles.headerTop}>
+          <img src="/logo.png" alt="BaseFlip" className={styles.logo} />
+          <h1 className={styles.title}>BaseFlip</h1>
+          <button onClick={() => window.location.href = '/leaderboard'} className={styles.leaderboardLink}>
+            👑 Leaderboard
+          </button>
+        </div>
+        <p className={styles.subtitle}>The Ultimate Onchain Prediction Game • Stake. Predict. Win.</p>
+        <div className={styles.walletButton}>
+          <Wallet>
+            <ConnectWallet className={styles.connectButton}>
+              <Avatar className="h-6 w-6" />
+              <Name />
+            </ConnectWallet>
+            <WalletDropdown>
+              <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
+                <Avatar />
+                <Name />
+                <Address />
+              </Identity>
+              <WalletDropdownDisconnect />
+            </WalletDropdown>
+          </Wallet>
         </div>
       </div>
+
+      {!mounted ? (
+        <div className={styles.loading}>
+          <div className={styles.spinner} />
+          <p>Shuffling the deck...</p>
+        </div>
+      ) : !isConnected ? (
+        <div className={styles.connectPrompt}>
+          <p>🎰 Welcome to the tables. Connect your wallet to play.</p>
+        </div>
+      ) : (
+        <div className={styles.gameContent}>
+          <LevelSelector
+            selectedLevel={selectedLevel}
+            onSelectLevel={setSelectedLevel}
+          />
+
+          {unclaimedRound && (
+            <div className={styles.claimBanner}>
+              <div className={styles.claimContent}>
+                <h3>🎉 You Won Round #{unclaimedRound.toString()}!</h3>
+                <button
+                  className={styles.claimButton}
+                  onClick={() => claimWinnings(unclaimedRound)}
+                  disabled={isClaiming}
+                >
+                  {isClaiming ? 'Claiming...' : 'Claim Winnings'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {roundData && (
+            <>
+              {roundData.isStarted && !roundData.isCompleted && (
+                <div className={styles.roundStatus}>
+                  <div className={styles.statusBadge}>
+                    🎲 Round #{roundData.roundId.toString()} • Bets Are In!
+                  </div>
+                  {lastWinner && (
+                    <div className={styles.lastWinner}>
+                      Previous Round #{lastWinner.id.toString()} Winner:
+                      <span className={lastWinner.group === 1 ? styles.groupA : styles.groupB}>
+                        {lastWinner.group === 1 ? ' Pool A' : ' Pool B'}
+                      </span>
+                    </div>
+                  )}
+                  <p>The table is hot. Waiting for the flip...</p>
+                </div>
+              )}
+
+              {roundData.isCompleted && (
+                <div className={styles.roundStatus}>
+                  <div className={styles.statusBadge}>
+                    💎 Round Complete
+                  </div>
+                  <p>The cards have been dealt. Check back for the next round!</p>
+                </div>
+              )}
+
+              <PoolDisplay
+                poolA={roundData.poolA}
+                poolB={roundData.poolB}
+                targetSize={roundData.targetSize}
+                userGroup={userGroup}
+              />
+
+              {!roundData.isStarted && !roundData.isCompleted && (
+                <StakeInput
+                  poolA={roundData.poolA}
+                  poolB={roundData.poolB}
+                  minStake={limits.min}
+                  maxStake={limits.max}
+                  onStake={handleStake}
+                  isStaking={isStaking}
+                  hasStaked={hasStaked}
+                />
+              )}
+            </>
+          )}
+
+          {!roundData && (
+            <div className={styles.loading}>
+              <div className={styles.spinner} />
+              <p>Loading game data...</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <footer className={styles.footer}>
+        <p>Built on Base • Play responsibly</p>
+      </footer>
+
+      <WinnersFeed />
+      <AdminPanel />
     </div>
   );
 }

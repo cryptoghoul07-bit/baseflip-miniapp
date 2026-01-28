@@ -1,0 +1,55 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="coinFace" x1="0" y1="0" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0052FF"/>
+      <stop offset="100%" style="stop-color:#0040C7"/>
+    </linearGradient>
+    
+    <linearGradient id="coinEdge" x1="0" y1="0" x2="100%" y2="0">
+      <stop offset="0%" style="stop-color:#0033A0"/>
+      <stop offset="50%" style="stop-color:#0052FF"/>
+      <stop offset="100%" style="stop-color:#0033A0"/>
+    </linearGradient>
+    
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.3 0"/>
+      <feOffset dx="2" dy="4"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background Glow -->
+  <circle cx="100" cy="100" r="80" fill="#0052FF" opacity="0.1" filter="url(#dropShadow)"/>
+
+  <!-- The Coin (Standing Diagonally) -->
+  <g transform="translate(100, 100) rotate(-15)"> <!-- Rotated for diagonal stance -->
+    
+    <!-- Coin Edge (Thickness) -->
+    <path d="M-45 -55 A 50 50 0 1 0 -45 55 L -35 55 A 50 50 0 1 1 -35 -55 Z" fill="url(#coinEdge)" transform="translate(-5, 0) scale(1, 1)"/>
+    
+    <!-- Coin Face -->
+    <circle cx="0" cy="0" r="55" fill="url(#coinFace)" stroke="white" stroke-width="2"/>
+    
+    <!-- Inner Ring -->
+    <circle cx="0" cy="0" r="45" fill="none" stroke="white" stroke-width="1.5" stroke-opacity="0.5"/>
+    
+    <!-- ETH Logo (Center) -->
+    <g transform="scale(1.2)">
+      <!-- Top Diamond -->
+      <path d="M0 -15 L 9 0 L 0 5 L -9 0 Z" fill="white"/>
+      <path d="M0 -15 L 0 5 L 9 0 Z" fill="#E6E6E6"/> <!-- Subtle shading -->
+
+      <!-- Bottom Diamond -->
+      <path d="M0 7 L 9 2 L 0 18 L -9 2 Z" fill="white"/>
+      <path d="M0 7 L 0 18 L 9 2 Z" fill="#E6E6E6"/> <!-- Subtle shading -->
+    </g>
+    
+    <!-- Shine/Reflection -->
+    <path d="M-30 -40 Q 0 -60 30 -40" stroke="white" stroke-width="2" stroke-opacity="0.4" fill="none"/>
+  </g>
+</svg>
