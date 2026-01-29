@@ -31,25 +31,36 @@ export function usePlatformStats() {
                 // Limiting to last 100 rounds to prevent explosion, or until we have an indexer.
                 // Since this is a demo/miniapp, fetching all is okay for <500 rounds.
 
-                const promises = [];
+                // 2. Use Multicall for scalable "All-Time" fetching
+                // This batches all round reads into a single RPC call (or a few batches)
+                // supporting thousands of rounds efficiently.
+
+                const contracts = [];
                 for (let i = 1; i <= id; i++) {
-                    promises.push(publicClient.readContract({
+                    contracts.push({
                         address: CONTRACT_ADDRESS,
                         abi: BaseFlipABI,
                         functionName: 'rounds',
                         args: [BigInt(i)]
-                    }));
+                    } as const);
                 }
 
-                const results = await Promise.all(promises);
+                // Execute multicall
+                const results = await publicClient.multicall({
+                    contracts: contracts,
+                    allowFailure: true // Continue even if one fails
+                });
 
-                results.forEach((round: any) => {
-                    // Structure: [levelId, poolA, poolB, ...]
-                    // Check if array or object based on wagmi return
-                    const poolA = Array.isArray(round) ? round[1] : round.poolA;
-                    const poolB = Array.isArray(round) ? round[2] : round.poolB;
+                results.forEach((result: any) => {
+                    if (result.status === 'success') {
+                        const round = result.result;
+                        // Structure: [levelId, poolA, poolB, ...]
+                        // Check if array or object based on wagmi return
+                        const poolA = Array.isArray(round) ? round[1] : round.poolA;
+                        const poolB = Array.isArray(round) ? round[2] : round.poolB;
 
-                    volume += (poolA + poolB);
+                        volume += (poolA + poolB);
+                    }
                 });
 
                 setTotalVolume(formatEther(volume));
