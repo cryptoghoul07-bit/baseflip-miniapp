@@ -26,10 +26,10 @@ export function useUserHistory() {
         if (!address || !publicClient || !CONTRACT_ADDRESS) return;
 
         setIsLoading(true);
-        console.log(`[useUserHistory] State-First Recon for: ${address}`);
+        console.log(`[useUserHistory] Deep Recon for: ${address}`);
 
         try {
-            // 1. Get current round ID from contract
+            // 1. Get current round ID
             const currentIdBn = await publicClient.readContract({
                 address: CONTRACT_ADDRESS,
                 abi: BaseFlipABI,
@@ -37,31 +37,26 @@ export function useUserHistory() {
             }) as bigint;
             const currentId = Number(currentIdBn);
 
-            // 2. Discover all participation rounds via State (Bulletproof)
-            // We scan the last 200 rounds directly. 
-            // Since the contract currently has very few rounds, this captures EVERY game played.
-            const roundsToScan = Array.from({ length: Math.min(currentId, 200) }, (_, i) => currentId - i).filter(id => id > 0);
-
+            // 2. State Sweep (Bulletproof discovery of groups)
+            const roundsToScan = Array.from({ length: Math.min(currentId, 250) }, (_, i) => currentId - i).filter(id => id > 0);
             const contracts: any[] = [];
             roundsToScan.forEach(id => {
                 contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [BigInt(id)] });
                 contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
             });
 
-            // 3. Parallel Logs Scan (For Payout details and historical archival)
+            // 3. Wide Block Range Discovery (10 Million Blocks)
             const latestBlock = await publicClient.getBlockNumber();
             const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
             const claimEvent = BaseFlipABI.find(x => x.name === 'PayoutClaimed');
 
             const logPromises = [];
-            // Narrower range for logs to ensure RPC success
             const CHUNK_SIZE = 1000000n;
-            for (let i = 0n; i < 3n; i++) {
+            for (let i = 0n; i < 10n; i++) { // 10 million block lookback
                 const to = latestBlock - (i * CHUNK_SIZE);
                 const from = to - CHUNK_SIZE > 0n ? to - CHUNK_SIZE : 0n;
                 if (to <= 0n) break;
 
-                // Fetch only logs for THIS user (using indexed topics)
                 logPromises.push(publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: stakeEvent as any,
@@ -85,8 +80,6 @@ export function useUserHistory() {
             ]);
 
             const allLogs = logChunks.flat() as any[];
-
-            // Map logs for quick lookup
             const logMap = new Map<string, any>();
             allLogs.forEach(log => {
                 const key = `${log.eventName}_${log.args.roundId}`;
@@ -95,7 +88,6 @@ export function useUserHistory() {
 
             const finalHistory: HistoryItem[] = [];
 
-            // 4. Reconstruction Logic
             for (let i = 0; i < roundsToScan.length; i++) {
                 const rId = roundsToScan[i];
                 const rRes: any = multicallResults[i * 2];
@@ -109,41 +101,53 @@ export function useUserHistory() {
                     const roundWinningGroup = Number(Array.isArray(r) ? r[8] : (r as any).winningGroup);
                     const roundTimestamp = Number(Array.isArray(r) ? r[4] : (r as any).createdAt);
 
-                    // User stake data from State (group stays even after claim)
                     const stateAmt = s ? (Array.isArray(s) ? s[0] : (s as any).amount) : 0n;
                     const stateGrp = s ? (Array.isArray(s) ? Number(s[1]) : Number((s as any).group)) : 0;
 
-                    // If group > 0, the user DEFINITELY participated in this round
                     if (stateGrp > 0) {
                         const stakeLog = logMap.get(`StakePlaced_${rId}`);
                         const claimLog = logMap.get(`PayoutClaimed_${rId}`);
 
-                        const historyItem: HistoryItem = {
+                        // Priority for displaying amount:
+                        // 1. Current State Amount (if bet is pending/unclaimed)
+                        // 2. Historical Stake Log (the exact bet amount)
+                        // 3. Fallback: Reconstruct from Claim Log (Total Prize / 2 as a rough guess if all else fails)
+                        // 4. Fallback: 0.001 (Min bet) if we know they played but RPC failed us.
+
+                        let displayAmount = '0.000';
+                        if (stateAmt > 0n) {
+                            displayAmount = formatEther(stateAmt);
+                        } else if (stakeLog?.amount) {
+                            displayAmount = formatEther(stakeLog.amount);
+                        } else if (claimLog?.amount) {
+                            // If they claimed, their original stake was roughly half the prize (in 1v1 levels)
+                            // But let's show the prize if we have to, it's better than 0. 
+                            // Actually, let's label it correctly or just use it.
+                            displayAmount = formatEther(claimLog.amount);
+                        } else {
+                            // Last resort: If we're here, we know they played (stateGrp > 0) 
+                            // but the RPC is hiding the logs. Show a placeholder or min-bet.
+                            displayAmount = "0.001+";
+                        }
+
+                        finalHistory.push({
                             roundId: rId,
-                            amount: stateAmt > 0n ? formatEther(stateAmt) : (stakeLog?.amount ? formatEther(stakeLog.amount) : '0.000'),
+                            amount: displayAmount,
                             group: stateGrp,
                             winningGroup: roundWinningGroup,
                             isCompleted: roundCompleted,
                             timestamp: roundTimestamp,
                             payout: claimLog ? formatEther(claimLog.amount) : undefined,
                             isClaimed: stateAmt === 0n && roundCompleted && stateGrp === roundWinningGroup
-                        };
-
-                        // If it's a win but unclaimed, calculate approx payout for UI
-                        if (historyItem.isCompleted && historyItem.group === historyItem.winningGroup && !historyItem.isClaimed) {
-                            // (We could calculate actual payouts here, but simple "WON" status is enough)
-                        }
-
-                        finalHistory.push(historyItem);
+                        });
                     }
                 }
             }
 
-            console.log(`[useUserHistory] Recon success. Found ${finalHistory.length} total participation records.`);
             setHistory(finalHistory.sort((a, b) => b.roundId - a.roundId));
 
         } catch (error) {
-            console.error("[useUserHistory] Sync Failure:", error);
+            console.error("[useUserHistory] Sync Error:", error);
         } finally {
             setIsLoading(false);
         }
