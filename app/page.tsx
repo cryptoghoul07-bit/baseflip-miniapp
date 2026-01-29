@@ -26,6 +26,7 @@ import CoinFlipAnimation from "./components/CoinFlipAnimation/CoinFlipAnimation"
 import styles from "./page.module.css";
 import { usePlatformStats } from "./hooks/usePlatformStats";
 import { useEthPrice } from "./hooks/useEthPrice";
+import HistoryModal from "./components/HistoryModal/HistoryModal";
 
 // Internal component for stats to keep page clean
 function PlatformStatsBanner() {
@@ -83,6 +84,7 @@ export default function Home() {
 
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Track the last round we animated so we don't re-animate on refresh
   const lastAnimatedRoundRef = useState<string | null>(null);
@@ -160,6 +162,9 @@ export default function Home() {
           <h1 className={styles.title}>BaseFlip</h1>
           <button onClick={() => window.location.href = '/leaderboard'} className={styles.leaderboardLink}>
             👑 Leaderboard
+          </button>
+          <button onClick={() => setShowHistory(true)} className={styles.leaderboardLink} style={{ marginLeft: '10px' }}>
+            📜 My Bets
           </button>
         </div>
         <p className={styles.subtitle}>The Ultimate Onchain Prediction Game • Stake. Predict. Win.</p>
@@ -392,6 +397,11 @@ export default function Home() {
         isFlipping={isFlipping}
         winningGroup={flipWinner}
         onAnimationComplete={handleFlipComplete}
+      />
+
+      <HistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
       />
     </div>
   );

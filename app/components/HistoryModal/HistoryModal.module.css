@@ -1,0 +1,173 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #0A0A0F;
+    border: 1px solid rgba(0, 82, 255, 0.3);
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 82, 255, 0.2);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    color: #94A3B8;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.empty,
+.loading {
+    padding: 40px;
+    text-align: center;
+    color: #64748B;
+}
+
+.row {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 1px solid transparent;
+}
+
+.won {
+    border-color: rgba(0, 255, 0, 0.2);
+    background: linear-gradient(90deg, rgba(0, 255, 0, 0.05), transparent);
+}
+
+.lost {
+    border-color: rgba(255, 0, 0, 0.2);
+    background: linear-gradient(90deg, rgba(255, 0, 0, 0.05), transparent);
+}
+
+.rowLeft,
+.rowRight {
+    display: flex;
+    flex-direction: column;
+}
+
+.rowCenter {
+    flex: 1;
+    margin: 0 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.roundId {
+    font-size: 0.8rem;
+    color: #94A3B8;
+    font-weight: bold;
+}
+
+.timestamp {
+    font-size: 0.7rem;
+    color: #64748B;
+}
+
+.amount {
+    color: white;
+    font-weight: bold;
+}
+
+.groupA {
+    color: #00D4FF;
+    font-size: 0.8rem;
+}
+
+.groupB {
+    color: #FF4444;
+    font-size: 0.8rem;
+}
+
+.statusWon {
+    color: #00FF88;
+    font-weight: bold;
+}
+
+.statusLost {
+    color: #FF4444;
+}
+
+.statusPending {
+    color: #FFDD00;
+}
+
+.footer {
+    padding: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.refreshButton {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.refreshButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
