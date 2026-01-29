@@ -147,11 +147,29 @@ button {
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
   100% {
     background-position: 200% 0;
   }
+}
+
+/* OnchainKit Dark Theme Overrides */
+:root {
+  --ock-bg-default: #0A0A0F;
+  --ock-bg-inverse: #FFFFFF;
+  --ock-bg-alternative: #14141E;
+
+  --ock-text-primary: #FFFFFF;
+  --ock-text-secondary: #94A3B8;
+  --ock-text-inverse: #000000;
+
+  --ock-border-line: rgba(255, 255, 255, 0.1);
+  --ock-border-radius: 24px;
+  --ock-border-radius-inner: 16px;
+
+  --ock-font-family: var(--font-body);
+}
+
+[data-theme='dark'] {
+  --ock-bg-default: #0A0A0F;
+  --ock-bg-alternative: #14141E;
 }
