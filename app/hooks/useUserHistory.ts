@@ -36,7 +36,7 @@ export function useUserHistory() {
 
             const id = Number(currentId);
             setHistory([]); // Clear previous
-            const BATCH_SIZE = 250; // 250 rounds * 2 calls = 500 calls per batch (safe limit)
+            const BATCH_SIZE = 50; // 50 rounds * 2 calls = 100 calls per batch (safer limit)
 
             // Loop backwards from currentId to 1 in chunks
             for (let end = id; end >= 1; end -= BATCH_SIZE) {
