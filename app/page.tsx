@@ -56,17 +56,17 @@ export default function Home() {
   const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(null);
 
   useEffect(() => {
-    // If round is completed and legitimate winner
-    if (roundData && roundData.isCompleted && roundData.winningGroup > 0) {
-      // Check if we already animated THIS round
-      if (lastAnimatedId !== roundData.roundId) {
-        console.log("Triggering Flip Animation! new Round:", roundData.roundId, "Winner:", roundData.winningGroup);
+    // Watch for updates to lastWinner (which represents the just-completed round)
+    if (lastWinner && lastWinner.group > 0) {
+      // Check if we already animated THIS round ID
+      if (lastAnimatedId !== lastWinner.id) {
+        console.log("Triggering Flip Animation! Winner of Round:", lastWinner.id, "Group:", lastWinner.group);
         setIsFlipping(true);
-        setFlipWinner(Number(roundData.winningGroup));
-        setLastAnimatedId(roundData.roundId); // Mark as animated
+        setFlipWinner(lastWinner.group);
+        setLastAnimatedId(lastWinner.id); // Mark as animated
       }
     }
-  }, [roundData, lastAnimatedId]);
+  }, [lastWinner, lastAnimatedId]);
 
   const handleFlipComplete = () => {
     setIsFlipping(false);
@@ -189,6 +189,28 @@ export default function Home() {
                       </span>
                     </div>
                   )}
+                  {lastWinner && (
+                    <button
+                      onClick={() => {
+                        setIsFlipping(true);
+                        setFlipWinner(lastWinner.group);
+                      }}
+                      style={{
+                        fontSize: '0.7rem',
+                        padding: '4px 8px',
+                        marginBottom: '10px',
+                        background: 'rgba(255,255,255,0.15)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        borderRadius: '12px',
+                        color: 'white',
+                        cursor: 'pointer',
+                        display: 'block',
+                        margin: '5px auto'
+                      }}
+                    >
+                      ↺ Replay Round #{lastWinner.id.toString()} Flip
+                    </button>
+                  )}
                   <p>Bot is flipping the coin... (Auto-resolves within 15s)</p>
                   <button
                     onClick={() => refetchRound()}
@@ -206,18 +228,7 @@ export default function Home() {
                   </div>
                   <p>The cards have been dealt. Check back for the next round!</p>
 
-                  {roundData.winningGroup > 0 && (
-                    <button
-                      onClick={() => {
-                        setIsFlipping(true);
-                        setFlipWinner(Number(roundData.winningGroup));
-                      }}
-                      className={styles.leaderboardLink}
-                      style={{ marginTop: '10px', fontSize: '0.8rem', padding: '6px 12px' }}
-                    >
-                      ↺ Replay Flip
-                    </button>
-                  )}
+                  <p>The cards have been dealt. Check back for the next round!</p>
                 </div>
               )}
 
