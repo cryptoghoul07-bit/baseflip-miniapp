@@ -52,48 +52,55 @@ export function useUserHistory() {
                 return;
             }
 
-            // 3. Multicall to get the STATUS of these rounds (who won?)
+            // 3. Batched Multicall to get the STATUS of these rounds
+            // Split into batches of 50 to ensure we don't hit RPC limits if user has many bets
             const roundIds = sortedLogs.map(log => (log.args as any).roundId);
-
-            const contracts: any[] = roundIds.map(id => ({
-                address: CONTRACT_ADDRESS,
-                abi: BaseFlipABI,
-                functionName: 'rounds',
-                args: [id]
-            } as const));
-
-            const roundResults = await publicClient.multicall({
-                contracts,
-                allowFailure: true
-            });
-
+            const BATCH_SIZE = 50;
             const foundHistory: HistoryItem[] = [];
 
-            for (let i = 0; i < sortedLogs.length; i++) {
-                const log = sortedLogs[i];
-                const roundResult = roundResults[i];
-                const args = log.args as any;
+            for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
+                const batchIds = roundIds.slice(i, i + BATCH_SIZE);
+                const batchLogs = sortedLogs.slice(i, i + BATCH_SIZE);
 
-                if (roundResult.status === 'success') {
-                    const r: any = roundResult.result;
+                const contracts: any[] = batchIds.map(id => ({
+                    address: CONTRACT_ADDRESS,
+                    abi: BaseFlipABI,
+                    functionName: 'rounds',
+                    args: [id]
+                } as const));
 
-                    const roundId = Number(args.roundId);
-                    const stakeAmount = args.amount;
-                    const stakeGroup = args.group;
+                const batchResults = await publicClient.multicall({
+                    contracts,
+                    allowFailure: true
+                });
 
-                    // Round Data
-                    const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
-                    const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
-                    const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
+                // Process batch
+                for (let j = 0; j < batchResults.length; j++) {
+                    const log = batchLogs[j];
+                    const roundResult = batchResults[j];
+                    const args = log.args as any;
 
-                    foundHistory.push({
-                        roundId,
-                        amount: formatEther(stakeAmount),
-                        group: stakeGroup,
-                        winningGroup,
-                        isCompleted,
-                        timestamp: createdAt
-                    });
+                    if (roundResult.status === 'success') {
+                        const r: any = roundResult.result;
+
+                        const roundId = Number(args.roundId);
+                        const stakeAmount = args.amount;
+                        const stakeGroup = args.group;
+
+                        // Round Data
+                        const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
+                        const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
+                        const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
+
+                        foundHistory.push({
+                            roundId,
+                            amount: formatEther(stakeAmount),
+                            group: stakeGroup,
+                            winningGroup,
+                            isCompleted,
+                            timestamp: createdAt
+                        });
+                    }
                 }
             }
 
