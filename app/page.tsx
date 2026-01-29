@@ -205,6 +205,19 @@ export default function Home() {
                     💎 Round Complete
                   </div>
                   <p>The cards have been dealt. Check back for the next round!</p>
+
+                  {roundData.winningGroup > 0 && (
+                    <button
+                      onClick={() => {
+                        setIsFlipping(true);
+                        setFlipWinner(Number(roundData.winningGroup));
+                      }}
+                      className={styles.leaderboardLink}
+                      style={{ marginTop: '10px', fontSize: '0.8rem', padding: '6px 12px' }}
+                    >
+                      ↺ Replay Flip
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -271,16 +284,6 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <p>Built on Base • Play responsibly</p>
-        <button
-          onClick={() => {
-            console.log("Manual trigger flip!");
-            setIsFlipping(true);
-            setFlipWinner(1);
-          }}
-          style={{ opacity: 0.1, fontSize: '10px' }}
-        >
-          DEBUG: Test Flip
-        </button>
       </footer>
 
       <WinnersFeed />
