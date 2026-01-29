@@ -35,83 +35,75 @@ export function useUserHistory() {
             }) as bigint;
 
             const id = Number(currentId);
-            const scanDepth = 20; // Last 20 rounds for history
-            const startId = Math.max(1, id - scanDepth);
+            setHistory([]); // Clear previous
+            const BATCH_SIZE = 250; // 250 rounds * 2 calls = 500 calls per batch (safe limit)
 
-            // 2. Prepare Multicall for User Stakes AND Round Info
-            const contracts: any[] = [];
+            // Loop backwards from currentId to 1 in chunks
+            for (let end = id; end >= 1; end -= BATCH_SIZE) {
+                const start = Math.max(1, end - BATCH_SIZE + 1);
+                const contracts: any[] = [];
 
-            // For each round, we need 2 calls: rounds(i) and userStakes(i, user)
-            for (let i = id; i >= startId; i--) { // Reverse order (newest first)
-                contracts.push({
-                    address: CONTRACT_ADDRESS,
-                    abi: BaseFlipABI,
-                    functionName: 'rounds',
-                    args: [BigInt(i)]
+                // Build batch (reverse order within batch to keep sorting)
+                for (let i = end; i >= start; i--) {
+                    contracts.push({
+                        address: CONTRACT_ADDRESS,
+                        abi: BaseFlipABI,
+                        functionName: 'rounds',
+                        args: [BigInt(i)]
+                    });
+                    contracts.push({
+                        address: CONTRACT_ADDRESS,
+                        abi: BaseFlipABI,
+                        functionName: 'userStakes',
+                        args: [BigInt(i), address]
+                    });
+                }
+
+                const results = await publicClient.multicall({
+                    contracts,
+                    allowFailure: true
                 });
-                contracts.push({
-                    address: CONTRACT_ADDRESS,
-                    abi: BaseFlipABI,
-                    functionName: 'userStakes',
-                    args: [BigInt(i), address]
-                });
-            }
 
-            const results = await publicClient.multicall({
-                contracts,
-                allowFailure: true
-            });
+                const batchFound: HistoryItem[] = [];
 
-            const foundHistory: HistoryItem[] = [];
+                for (let i = 0; i < results.length; i += 2) {
+                    const roundResult = results[i];
+                    const stakeResult = results[i + 1];
 
-            // Process results in pairs
-            // Index j = rounds, Index j+1 = userStakes
-            for (let i = 0; i < results.length; i += 2) {
-                const roundResult = results[i];
-                const stakeResult = results[i + 1];
+                    // Correct ID calculation
+                    // In this inner loop, we pushed: end, end-1, end-2...
+                    // So index 0 matches 'end', index 2 matches 'end-1'
+                    const offset = i / 2;
+                    const roundId = end - offset;
 
-                // Calculate actual round ID based on loop index logic
-                // Loop was: i going down from id to startId. 
-                // Iteration 0 corresponds to round 'id'.
-                // Iteration 1 corresponds to round 'id-1', etc.
-                const offset = i / 2;
-                const roundId = id - offset;
+                    if (roundResult.status === 'success' && stakeResult.status === 'success') {
+                        const r: any = roundResult.result;
+                        const s: any = stakeResult.result;
+                        const stakeAmount = Array.isArray(s) ? s[0] : s.amount;
 
-                if (roundResult.status === 'success' && stakeResult.status === 'success') {
-                    const r: any = roundResult.result;
-                    const s: any = stakeResult.result;
+                        if (stakeAmount > 0n) {
+                            const stakeGroup = Array.isArray(s) ? s[1] : s.group;
+                            const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
+                            const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
+                            const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
 
-                    const stakeAmount = Array.isArray(s) ? s[0] : s.amount;
-
-                    // Only show rounds where user participated
-                    if (stakeAmount > 0n) {
-                        const stakeGroup = Array.isArray(s) ? s[1] : s.group;
-                        const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
-                        const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
-                        // createdAt is index 4 in struct
-                        const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
-
-                        let payout = undefined;
-                        if (isCompleted && winningGroup === stakeGroup) {
-                            // Rough calculation, or we could fetch claimed events. 
-                            // For history, simple 2x approximation or just "Won"
-                            // Actually, calculating true payout requires pool sizes.
-                            // Let's just return raw data and let UI handle display
+                            batchFound.push({
+                                roundId,
+                                amount: formatEther(stakeAmount),
+                                group: stakeGroup,
+                                winningGroup,
+                                isCompleted,
+                                timestamp: createdAt
+                            });
                         }
-
-                        foundHistory.push({
-                            roundId,
-                            amount: formatEther(stakeAmount),
-                            group: stakeGroup,
-                            winningGroup,
-                            isCompleted,
-                            timestamp: createdAt
-                        });
                     }
                 }
-            }
 
-            setHistory(foundHistory);
+                // Append this batch to history immediately so user sees data loading
+                if (batchFound.length > 0) {
+                    setHistory(prev => [...prev, ...batchFound]);
+                }
+            }
 
         } catch (error) {
             console.error("Error fetching history:", error);
