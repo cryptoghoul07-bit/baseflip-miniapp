@@ -301,6 +301,66 @@
   box-shadow: 0 0 25px rgba(0, 82, 255, 0.6) !important;
 }
 
+.walletDropdown {
+  background: rgba(15, 23, 42, 0.98) !important;
+  backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  border-radius: var(--border-radius-lg) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 82, 255, 0.1) !important;
+  padding: 16px !important;
+  min-width: 260px !important;
+  margin-top: 8px !important;
+}
+
+.disconnectButton {
+  margin-top: 16px !important;
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.1) 0%, rgba(255, 0, 0, 0.05) 100%) !important;
+  color: #FF5D5D !important;
+  border: 1px solid rgba(255, 68, 68, 0.2) !important;
+  border-radius: var(--border-radius-md) !important;
+  padding: 12px !important;
+  font-weight: 800 !important;
+  font-size: 0.8rem !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1.5px !important;
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.disconnectButton:hover {
+  background: rgba(255, 68, 68, 0.2) !important;
+  border-color: rgba(255, 93, 93, 0.5) !important;
+  color: #FFFFFF !important;
+  transform: translateY(1px) scale(0.98) !important;
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.2) !important;
+}
+
+/* Overriding internal OnchainKit text colors to match our dark theme */
+:global(.ock-identity-name) {
+  color: white !important;
+  font-weight: 800 !important;
+  font-size: 1.1rem !important;
+}
+
+:global(.ock-identity-address) {
+  color: #94A3B8 !important;
+  font-family: monospace !important;
+  opacity: 0.8 !important;
+}
+
+:global(.ock-identity-wrapper) {
+  padding: 12px !important;
+  border-radius: var(--border-radius-md) !important;
+  transition: background 0.2s ease !important;
+}
+
+:global(.ock-identity-wrapper:hover) {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
 /* Hide default OnchainKit styles if needed */
 .connectButton>div {
   background: transparent !important;

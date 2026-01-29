@@ -176,13 +176,13 @@ export default function Home() {
               <Avatar className="h-6 w-6" />
               <Name />
             </ConnectWallet>
-            <WalletDropdown>
+            <WalletDropdown className={styles.walletDropdown}>
               <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
                 <Avatar />
                 <Name />
                 <Address />
               </Identity>
-              <WalletDropdownDisconnect />
+              <WalletDropdownDisconnect className={styles.disconnectButton} />
             </WalletDropdown>
           </Wallet>
         </div>

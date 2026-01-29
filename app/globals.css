@@ -157,16 +157,36 @@ button {
   --ock-bg-default: #0A0A0F !important;
   --ock-bg-inverse: #FFFFFF !important;
   --ock-bg-alternative: #14141E !important;
+  --ock-bg-secondary: rgba(255, 255, 255, 0.05) !important;
 
   --ock-text-primary: #FFFFFF !important;
   --ock-text-secondary: #94A3B8 !important;
   --ock-text-inverse: #000000 !important;
 
   --ock-border-line: rgba(255, 255, 255, 0.1) !important;
-  --ock-border-radius: 24px !important;
-  --ock-border-radius-inner: 16px !important;
+  --ock-border-radius: 20px !important;
+  --ock-border-radius-inner: 12px !important;
 
   --ock-font-family: var(--font-body) !important;
+
+  /* Custom Action Colors */
+  --ock-primary: #0052FF !important;
+  --ock-primary-hover: #00D4FF !important;
+  --ock-error: #FF4444 !important;
+}
+
+/* Custom styling for the Identity hover and Copy Toast */
+:global(.ock-identity-wrapper:hover) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 12px !important;
+}
+
+:global(.ock-copy-toast) {
+  background: var(--gradient-blue) !important;
+  color: white !important;
+  border-radius: 20px !important;
+  font-weight: 700 !important;
+  box-shadow: var(--glow-blue) !important;
 }
 
 [data-theme='dark'] {
