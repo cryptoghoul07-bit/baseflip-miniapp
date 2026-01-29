@@ -12,6 +12,7 @@ import { baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { randomInt } from 'crypto';
 import dotenv from 'dotenv';
+import express from 'express';
 
 dotenv.config({ path: '.env.local' });
 
@@ -256,8 +257,25 @@ async function startMonitoring() {
     });
 }
 
-// Start the bot
-startMonitoring().catch((error) => {
-    console.error('Fatal error:', error);
-    process.exit(1);
+// Start HTTP server for Render/Health Checks
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('BaseFlip Bot is running 🤖');
+});
+
+// Helper to keep Render service awake (self-ping if URL provided)
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+app.listen(PORT, () => {
+    console.log(`\n🌐 Web server listening on port ${PORT}`);
+
+    // Start the bot logic after server is up
+    startMonitoring().catch((error) => {
+        console.error('Fatal error:', error);
+        process.exit(1);
+    });
 });
