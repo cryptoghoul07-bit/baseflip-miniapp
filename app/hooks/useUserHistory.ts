@@ -27,38 +27,40 @@ export function useUserHistory() {
 
         setIsLoading(true);
         try {
-            // Scan from block 0 for "True All Time" history on Base Sepolia
-            const logs = await publicClient.getLogs({
+            const currentBlock = await publicClient.getBlockNumber();
+            const fromBlock = currentBlock - 5000000n; // ~4 months
+
+            const stakePlacedEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
+
+            // Fetch ALL stake logs for the contract and filter locally to 
+            // bypass any potential RPC indexing/casing issues
+            const allLogs = await publicClient.getLogs({
                 address: CONTRACT_ADDRESS,
-                event: parseAbiItem('event StakePlaced(uint256 indexed roundId, address indexed user, uint8 group, uint256 amount)'),
-                args: {
-                    user: address
-                },
-                fromBlock: 0n,
+                event: stakePlacedEvent as any,
+                fromBlock: fromBlock > 0n ? fromBlock : 0n,
                 toBlock: 'latest'
-            });
+            }) as any[];
 
-            // 2. Extract unique rounds and details from logs
-            // Reverse to show newest first
-            const sortedLogs = logs.reverse();
+            // Filter locally by user address
+            const userLogs = allLogs.filter(log =>
+                log.args.user?.toLowerCase() === address.toLowerCase()
+            ).reverse();
 
-            if (sortedLogs.length === 0) {
+            if (userLogs.length === 0) {
+                console.log("[useUserHistory] No logs found in range for:", address);
                 setHistory([]);
                 setIsLoading(false);
                 return;
             }
 
-            // 3. Batched Multicall to get the STATUS of these rounds
-            // Split into batches of 50 to ensure we don't hit RPC limits if user has many bets
-            const roundIds = sortedLogs.map(log => (log.args as any).roundId);
-            const BATCH_SIZE = 50;
+            const roundIds = Array.from(new Set(userLogs.map(log => log.args.roundId)));
+            const BATCH_SIZE = 20; // Super safe batch size
             const foundHistory: HistoryItem[] = [];
 
             for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
-                const batchIds = roundIds.slice(i, i + BATCH_SIZE);
-                const batchLogs = sortedLogs.slice(i, i + BATCH_SIZE);
+                const batch = roundIds.slice(i, i + BATCH_SIZE);
 
-                const contracts: any[] = batchIds.map(id => ({
+                const contracts: any[] = batch.map(id => ({
                     address: CONTRACT_ADDRESS,
                     abi: BaseFlipABI,
                     functionName: 'rounds',
@@ -70,40 +72,34 @@ export function useUserHistory() {
                     allowFailure: true
                 });
 
-                // Process batch
                 for (let j = 0; j < batchResults.length; j++) {
-                    const log = batchLogs[j];
                     const roundResult = batchResults[j];
-                    const args = log.args as any;
+                    const roundIdBig = batch[j] as bigint;
+                    const relevantLogs = userLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
 
                     if (roundResult.status === 'success') {
                         const r: any = roundResult.result;
 
-                        const roundId = Number(args.roundId);
-                        const stakeAmount = args.amount;
-                        const stakeGroup = args.group;
-
-                        // Round Data
-                        const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
-                        const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
-                        const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
-
-                        foundHistory.push({
-                            roundId,
-                            amount: formatEther(stakeAmount),
-                            group: stakeGroup,
-                            winningGroup,
-                            isCompleted,
-                            timestamp: createdAt
+                        relevantLogs.forEach(log => {
+                            const args = log.args;
+                            foundHistory.push({
+                                roundId: Number(args.roundId),
+                                amount: formatEther(args.amount),
+                                group: Number(args.group),
+                                winningGroup: Number(Array.isArray(r) ? r[8] : r.winningGroup),
+                                isCompleted: Array.isArray(r) ? r[6] : r.isCompleted,
+                                timestamp: Number(Array.isArray(r) ? r[4] : r.createdAt)
+                            });
                         });
                     }
                 }
             }
 
+            foundHistory.sort((a, b) => b.roundId - a.roundId);
             setHistory(foundHistory);
 
         } catch (error) {
-            console.error("Error fetching history via logs:", error);
+            console.error("Error fetching history:", error);
         } finally {
             setIsLoading(false);
         }

@@ -27,29 +27,38 @@ export function useAllUnclaimedWinnings() {
 
         setIsScanning(true);
         try {
-            // 1. Find all rounds the user ever participated in using logs
-            const stakeLogs = await publicClient.getLogs({
-                address: CONTRACT_ADDRESS,
-                event: parseAbiItem('event StakePlaced(uint256 indexed roundId, address indexed user, uint8 group, uint256 amount)'),
-                args: { user: address },
-                fromBlock: 0n,
-                toBlock: 'latest'
-            });
+            const currentBlock = await publicClient.getBlockNumber();
+            const fromBlock = currentBlock - 5000000n; // ~4 months
 
-            if (stakeLogs.length === 0) {
+            // 1. Find all rounds the user ever participated in using logs
+            // Fetching all and filtering locally for maximum reliability
+            const stakePlacedEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
+            const allLogs = await publicClient.getLogs({
+                address: CONTRACT_ADDRESS,
+                event: stakePlacedEvent as any,
+                fromBlock: fromBlock > 0n ? fromBlock : 0n,
+                toBlock: 'latest'
+            }) as any[];
+
+            // Filter locally by user address
+            const userLogs = allLogs.filter(log =>
+                log.args.user?.toLowerCase() === address.toLowerCase()
+            );
+
+            if (userLogs.length === 0) {
                 setClaimableRounds([]);
                 return;
             }
 
             // 2. Get unique round IDs to check
-            const roundIds = Array.from(new Set(stakeLogs.map(l => (l.args as any).roundId)));
+            const roundIds = Array.from(new Set(userLogs.map(l => l.args.roundId)));
 
             // 3. Batched Multicall check: status of round and current stake mapping
-            const BATCH_SIZE = 50;
+            const BATCH_SIZE = 20;
             const allClaimable: ClaimableRound[] = [];
 
             for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
-                const batch = roundIds.slice(i, i + BATCH_SIZE);
+                const batch = roundIds.slice(i, i + BATCH_SIZE) as bigint[];
                 const contracts: any[] = [];
 
                 batch.forEach(id => {
