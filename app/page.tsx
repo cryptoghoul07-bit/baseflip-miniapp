@@ -191,17 +191,27 @@ export default function Home() {
             </>
           )}
 
-          {!roundData && !isBaseFlipLoading && !baseFlipError && (
-            <div className={styles.loading}>
-              <div className={styles.spinner} />
-              <p>Preparing the table...</p>
-            </div>
-          )}
 
+          {/* Loading States */}
           {!roundData && isBaseFlipLoading && (
             <div className={styles.loading}>
               <div className={styles.spinner} />
               <p>Loading game data from Base...</p>
+            </div>
+          )}
+
+          {!roundData && !isBaseFlipLoading && !baseFlipError && (
+            <div className={styles.loading}>
+              <div className={styles.spinner} />
+              <p>Preparing the table...</p>
+              {/* Fallback button in case it gets stuck here */}
+              <button
+                onClick={() => refetchRound()}
+                className={styles.leaderboardLink}
+                style={{ marginTop: '20px', fontSize: '0.8rem' }}
+              >
+                Force Reload
+              </button>
             </div>
           )}
 
