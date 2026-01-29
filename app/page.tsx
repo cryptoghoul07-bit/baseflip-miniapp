@@ -43,6 +43,37 @@ export default function Home() {
     error: baseFlipError
   } = useBaseFlip();
 
+  const [isFlipping, setIsFlipping] = useState(false);
+  const [flipWinner, setFlipWinner] = useState<number | null>(null);
+
+  // Track previous round completion state to trigger animation
+  const prevCompletedRef = useState<{ isCompleted: boolean } | null>(null);
+  // actually useState is not good for ref-like behavior in render loop logic comparison without effect interference.
+  // Converting back to useRef pattern but respecting React variable rules.
+  // Let's use standard hooks.
+
+  // We need to track the *previous* state of roundData to detect the edge.
+  const [prevRoundComplete, setPrevRoundComplete] = useState(false);
+
+  useEffect(() => {
+    // If round transitions from NOT completed to COMPLETED, and we have a winner
+    if (roundData && roundData.isCompleted && !prevRoundComplete && roundData.winningGroup > 0) {
+      console.log("Triggering Flip Animation! Winner:", roundData.winningGroup);
+      setIsFlipping(true);
+      setFlipWinner(Number(roundData.winningGroup));
+    }
+
+    // Update tracker
+    if (roundData) {
+      setPrevRoundComplete(roundData.isCompleted);
+    }
+  }, [roundData, prevRoundComplete]);
+
+  const handleFlipComplete = () => {
+    setIsFlipping(false);
+    setFlipWinner(null);
+  };
+
   // Initialize the miniapp
   useEffect(() => {
     if (!isFrameReady) {
