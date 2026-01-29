@@ -77,7 +77,7 @@ export default function Home() {
     error: baseFlipError
   } = useBaseFlip();
 
-  const { claimableRounds, claimRound, isClaiming, scanForWinnings } = useAllUnclaimedWinnings();
+  const { claimableRounds, claimRound, isClaiming: isClaimingLegacy, scanForWinnings } = useAllUnclaimedWinnings();
 
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
@@ -212,7 +212,7 @@ export default function Home() {
                           // Optimistic update or refetch
                           setTimeout(scanForWinnings, 5000);
                         }}
-                        disabled={isClaiming}
+                        disabled={isClaimingLegacy}
                         style={{ padding: '4px 12px', fontSize: '0.8rem' }}
                       >
                         Claim
