@@ -35,7 +35,7 @@ export function usePlatformStats() {
                 // This batches all round reads into a single RPC call (or a few batches)
                 // supporting thousands of rounds efficiently.
 
-                const contracts = [];
+                const contracts: any[] = [];
                 for (let i = 1; i <= id; i++) {
                     contracts.push({
                         address: CONTRACT_ADDRESS,
