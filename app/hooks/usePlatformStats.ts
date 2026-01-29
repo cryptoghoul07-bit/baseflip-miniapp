@@ -29,49 +29,45 @@ export function usePlatformStats() {
                 // 2. Batch read all rounds (or iterating if batch not supported easily)
                 // For simplicity and standard RPCs, we'll iterate parallelized promises
                 // Limiting to last 100 rounds to prevent explosion, or until we have an indexer.
-                // Since this is a demo/miniapp, fetching all is okay for <500 rounds.
 
                 // 2. Use Multicall for scalable "All-Time" fetching
                 // This batches all round reads into a single RPC call (or a few batches)
                 // supporting thousands of rounds efficiently.
 
-                // 3. Safety Cap: Only fetch last 1000 rounds to prevent execution time explosion
-                const startId = Math.max(1, id - 1000); // Max history depth
+                const BATCH_SIZE = 500;
+                let totalVolumeBn = 0n;
 
-                const contracts: any[] = [];
-                for (let i = 1; i <= id; i++) {
-                    // Optimization: If id > 1000, start from id - 1000? 
-                    // No, loop above starts at 1. We must change loop start.
-                }
+                // Process in chunks to support infinite scalability (Pagination)
+                for (let start = 1; start <= id; start += BATCH_SIZE) {
+                    const end = Math.min(start + BATCH_SIZE - 1, id);
+                    const contracts: any[] = [];
 
-                for (let i = startId; i <= id; i++) {
-                    contracts.push({
-                        address: CONTRACT_ADDRESS,
-                        abi: BaseFlipABI,
-                        functionName: 'rounds',
-                        args: [BigInt(i)]
-                    } as const);
-                }
-
-                // Execute multicall
-                const results = await publicClient.multicall({
-                    contracts: contracts,
-                    allowFailure: true // Continue even if one fails
-                });
-
-                results.forEach((result: any) => {
-                    if (result.status === 'success') {
-                        const round = result.result;
-                        // Structure: [levelId, poolA, poolB, ...]
-                        // Check if array or object based on wagmi return
-                        const poolA = Array.isArray(round) ? round[1] : round.poolA;
-                        const poolB = Array.isArray(round) ? round[2] : round.poolB;
-
-                        volume += (poolA + poolB);
+                    for (let i = start; i <= end; i++) {
+                        contracts.push({
+                            address: CONTRACT_ADDRESS,
+                            abi: BaseFlipABI,
+                            functionName: 'rounds',
+                            args: [BigInt(i)]
+                        } as const);
                     }
-                });
 
-                setTotalVolume(formatEther(volume));
+                    // Execute batch
+                    const results = await publicClient.multicall({
+                        contracts: contracts,
+                        allowFailure: true
+                    });
+
+                    results.forEach((result: any) => {
+                        if (result.status === 'success') {
+                            const round = result.result;
+                            const poolA = Array.isArray(round) ? round[1] : round.poolA;
+                            const poolB = Array.isArray(round) ? round[2] : round.poolB;
+                            totalVolumeBn += (poolA + poolB);
+                        }
+                    });
+                }
+
+                setTotalVolume(formatEther(totalVolumeBn));
             } catch (error) {
                 console.error("Error fetching platform stats:", error);
             } finally {
