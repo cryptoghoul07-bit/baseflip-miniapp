@@ -157,7 +157,13 @@ export default function Home() {
                       </span>
                     </div>
                   )}
-                  <p>The table is hot. Waiting for the flip...</p>
+                  <p>Bot is flipping the coin... (Auto-resolves within 15s)</p>
+                  <button
+                    onClick={() => refetchRound()}
+                    style={{ fontSize: '0.7rem', padding: '5px 10px', marginTop: '10px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', cursor: 'pointer' }}
+                  >
+                    Refresh Status
+                  </button>
                 </div>
               )}
 
