@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, parseAbiItem } from 'viem';
 import BaseFlipABI from '../lib/BaseFlipABI.json';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
@@ -27,24 +27,18 @@ export function useUserHistory() {
 
         setIsLoading(true);
         try {
-            // 1. Fetch "StakePlaced" events for the current user
-            // This persists even after claiming/reclaiming, unlike the mapping
+            const blockNumber = await publicClient.getBlockNumber();
+            // Scan last 500,000 blocks (~1.5 weeks on Base)
+            // This prevents "Method not allowed" or timeouts on public RPCs for 'earliest'
+            const fromBlock = blockNumber - 500000n;
+
             const logs = await publicClient.getLogs({
                 address: CONTRACT_ADDRESS,
-                event: {
-                    type: 'event',
-                    name: 'StakePlaced',
-                    inputs: [
-                        { type: 'uint256', indexed: true, name: 'roundId' },
-                        { type: 'address', indexed: true, name: 'user' },
-                        { type: 'uint8', indexed: false, name: 'group' },
-                        { type: 'uint256', indexed: false, name: 'amount' }
-                    ]
-                },
+                event: parseAbiItem('event StakePlaced(uint256 indexed roundId, address indexed user, uint8 group, uint256 amount)'),
                 args: {
                     user: address
                 },
-                fromBlock: 'earliest', // Scan from start. If slow, we might need to block-limit or paginate
+                fromBlock: fromBlock > 0n ? fromBlock : 0n,
                 toBlock: 'latest'
             });
 
