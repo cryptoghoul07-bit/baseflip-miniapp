@@ -32,7 +32,7 @@ const ABI = parseAbi([
     'event RoundStarted(uint256 indexed roundId, uint256 poolA, uint256 poolB)',
     'event WinnerDeclared(uint256 indexed roundId, uint8 winningGroup)',
     'function declareWinner(uint256 roundId, uint8 winningGroup) external',
-    'function rounds(uint256 roundId) external view returns (uint256 levelId, uint256 poolA, uint256 poolB, uint256 roundStartTime, bool isActive, bool isCompleted, uint8 winningGroup)',
+    'function rounds(uint256 roundId) external view returns (uint256 levelId, uint256 poolA, uint256 poolB, uint256 roundStartTime, uint256 createdAt, bool isActive, bool isCompleted, bool isCancelled, uint8 winningGroup)',
     'function currentRoundId() external view returns (uint256)',
     'function collectedFees() external view returns (uint256)',
     'function withdrawFees() external',
@@ -163,7 +163,7 @@ async function checkRound(roundId) {
             args: [BigInt(roundId)],
         });
 
-        const [levelId, poolA, poolB, roundStartTime, isActive, isCompleted, winningGroup] = round;
+        const [levelId, poolA, poolB, roundStartTime, createdAt, isActive, isCompleted, isCancelled, winningGroup] = round;
 
         // Check if round has started but not yet completed
         if (roundStartTime > 0n && !isCompleted && winningGroup === 0) {
@@ -185,6 +185,7 @@ async function checkRound(roundId) {
         return { exists: true, isCompleted: isCompleted };
 
     } catch (error) {
+        console.error(`⚠️ Error checking Round ${roundId}:`, error.message);
         // Assume error means round doesn't exist (revert) or network issue
         // strict check usually involves checking error string, but for now we assume non-existent if read fails
         return { exists: false, isCompleted: false };
@@ -232,7 +233,7 @@ async function startMonitoring() {
             });
 
             const roundId = Number(currentRoundId);
-            // console.log(`   🔍 Current Round on Chain: ${roundId}`);
+            console.log(`   🔍 Current Round on Chain: ${roundId}`);
 
             // Check current round (might be active)
             await checkRound(roundId);
