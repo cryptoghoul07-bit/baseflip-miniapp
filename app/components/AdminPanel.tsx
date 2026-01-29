@@ -7,7 +7,7 @@ import styles from './styles/AdminPanel.module.css';
 import AutoWinnerControl from './AutoWinnerControl';
 import { useEthPrice } from '../hooks/useEthPrice';
 
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS as `0x${string}`;
+const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
 
 const ABI = parseAbi([
     'function owner() view returns (address)',
