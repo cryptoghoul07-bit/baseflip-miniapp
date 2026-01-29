@@ -7,13 +7,15 @@ export function useEthPrice() {
     useEffect(() => {
         const fetchPrice = async () => {
             try {
-                // Fetch from internal API to avoid CORS/Network issues
-                const res = await fetch('/api/eth-price');
-                if (!res.ok) throw new Error('API failed');
+                // Fetch directly from Coinbase Client-Side (CORS is usually allowed for public data)
+                const res = await fetch('https://api.coinbase.com/v2/prices/ETH-USD/spot');
+                if (!res.ok) throw new Error('Coinbase API failed');
 
                 const data = await res.json();
                 if (data?.data?.amount) {
-                    setPrice(parseFloat(data.data.amount));
+                    const rate = parseFloat(data.data.amount);
+                    console.log('ETH Price updated:', rate);
+                    setPrice(rate);
                 }
             } catch (error) {
                 // Silently fail on error to simply not show the USD value
