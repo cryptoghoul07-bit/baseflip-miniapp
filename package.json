@@ -10,6 +10,9 @@
     "auto-winner": "node scripts/autoWinner.js",
     "snapshot": "node scripts/snapshotAirdrop.js"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@coinbase/onchainkit": "latest",
     "@farcaster/miniapp-sdk": "^0.1.8",
