@@ -26,90 +26,84 @@ export function useUserHistory() {
         if (!address || !publicClient || !CONTRACT_ADDRESS) return;
 
         setIsLoading(true);
+        setHistory([]); // Reset immediately for fresh state
+
         try {
             const latestBlock = await publicClient.getBlockNumber();
-            const CHUNK_SIZE = 100000n; // 100k blocks
-            const MAX_BLOCKS = 3000000n; // Scan last ~2 months
-            const stopBlock = latestBlock > MAX_BLOCKS ? latestBlock - MAX_BLOCKS : 0n;
+            const CHUNK_SIZE = 250000n;
+            const eventAbi = BaseFlipABI.find(x => x.name === 'StakePlaced');
 
-            const allUserLogs: any[] = [];
-            const stakePlacedEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
+            console.log(`[useUserHistory] Speed Scan started at block ${latestBlock}`);
 
-            console.log(`[useUserHistory] Starting Discovery Scan from ${latestBlock}`);
-
-            // Chunked Discovery (Bypasses RPC timeouts)
-            for (let to = latestBlock; to > stopBlock; to -= CHUNK_SIZE) {
+            // Parallel lookup for last 1,000,000 blocks (4 chunks)
+            // This is significantly faster than sequential loops
+            const chunks = [0n, 1n, 2n, 3n].map(i => {
+                const to = latestBlock - (i * CHUNK_SIZE);
                 const from = to - CHUNK_SIZE > 0n ? to - CHUNK_SIZE : 0n;
-                try {
-                    const logs = await publicClient.getLogs({
-                        address: CONTRACT_ADDRESS,
-                        event: stakePlacedEvent as any,
-                        args: { user: address },
-                        fromBlock: from,
-                        toBlock: to
-                    });
-                    if (logs.length > 0) allUserLogs.push(...logs);
-                } catch (e) {
-                    console.warn(`[useUserHistory] Skip block range ${from}-${to}`);
-                }
-                if (from <= stopBlock) break;
-            }
+                return publicClient.getLogs({
+                    address: CONTRACT_ADDRESS,
+                    event: eventAbi as any,
+                    args: { user: address },
+                    fromBlock: from,
+                    toBlock: to
+                }).catch(() => [] as any[]); // Catch individual chunk failures
+            });
 
-            if (allUserLogs.length === 0) {
+            const results = await Promise.all(chunks);
+            const allLogs = results.flat();
+
+            if (allLogs.length === 0) {
+                console.log("[useUserHistory] No activity found in last 1M blocks.");
                 setHistory([]);
                 return;
             }
 
-            // Group logs by roundId (unique rounds)
-            const sortedLogs = allUserLogs.reverse();
-            const roundIds = Array.from(new Set(sortedLogs.map(log => log.args.roundId)));
+            // Extract Unique Round IDs
+            const roundIds = Array.from(new Set(allLogs.map(log => log.args.roundId)));
+            const sortedRoundIds = roundIds.sort((a, b) => Number(BigInt(b) - BigInt(a))); // Newest first
 
-            const BATCH_SIZE = 20;
+            // Fetch Outcomes via Multicall (Limit to last 30 rounds for UX speed)
+            const displayRounds = sortedRoundIds.slice(0, 30);
+
+            const contracts: any[] = displayRounds.map(id => ({
+                address: CONTRACT_ADDRESS,
+                abi: BaseFlipABI,
+                functionName: 'rounds',
+                args: [id]
+            } as const));
+
+            const batchResults = await publicClient.multicall({
+                contracts,
+                allowFailure: true
+            });
+
             const foundHistory: HistoryItem[] = [];
 
-            for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
-                const batch = roundIds.slice(i, i + BATCH_SIZE);
-                const contracts: any[] = batch.map(id => ({
-                    address: CONTRACT_ADDRESS,
-                    abi: BaseFlipABI,
-                    functionName: 'rounds',
-                    args: [id]
-                } as const));
+            for (let i = 0; i < batchResults.length; i++) {
+                const roundResult = batchResults[i];
+                const roundIdBig = displayRounds[i] as bigint;
+                const relevantLogs = allLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
 
-                const batchResults = await publicClient.multicall({
-                    contracts,
-                    allowFailure: true
-                });
-
-                for (let j = 0; j < batchResults.length; j++) {
-                    const roundResult = batchResults[j];
-                    const roundIdBig = batch[j] as bigint;
-                    const relevantLogs = sortedLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
-
-                    if (roundResult.status === 'success') {
-                        const r: any = roundResult.result;
-                        relevantLogs.forEach(log => {
-                            const args = log.args;
-                            foundHistory.push({
-                                roundId: Number(args.roundId),
-                                amount: formatEther(args.amount),
-                                group: Number(args.group),
-                                winningGroup: Number(Array.isArray(r) ? r[8] : r.winningGroup),
-                                isCompleted: Array.isArray(r) ? r[6] : r.isCompleted,
-                                timestamp: Number(Array.isArray(r) ? r[4] : r.createdAt)
-                            });
+                if (roundResult.status === 'success') {
+                    const r: any = roundResult.result;
+                    relevantLogs.forEach(log => {
+                        const args = log.args;
+                        foundHistory.push({
+                            roundId: Number(args.roundId),
+                            amount: formatEther(args.amount),
+                            group: Number(args.group),
+                            winningGroup: Number(Array.isArray(r) ? r[8] : r.winningGroup),
+                            isCompleted: Array.isArray(r) ? r[6] : r.isCompleted,
+                            timestamp: Number(Array.isArray(r) ? r[4] : r.createdAt)
                         });
-                    }
+                    });
                 }
-                // Show items progressively
-                setHistory([...foundHistory]);
             }
 
-            foundHistory.sort((a, b) => b.roundId - a.roundId);
             setHistory(foundHistory);
 
         } catch (error) {
-            console.error("Discovery error:", error);
+            console.error("[useUserHistory] Fast Scan Failed:", error);
         } finally {
             setIsLoading(false);
         }
