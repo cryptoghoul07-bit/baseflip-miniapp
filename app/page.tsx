@@ -20,6 +20,7 @@ import PoolDisplay from "./components/PoolDisplay";
 import StakeInput from "./components/StakeInput";
 import WinnersFeed from "./components/WinnersFeed";
 import AdminPanel from "./components/AdminPanel";
+import WelcomeModal from "./components/WelcomeModal/WelcomeModal";
 import styles from "./page.module.css";
 
 export default function Home() {
@@ -243,6 +244,7 @@ export default function Home() {
 
       <WinnersFeed />
       <AdminPanel />
+      <WelcomeModal address={address} />
     </div>
   );
 }
