@@ -384,3 +384,28 @@
     color: var(--gold);
     min-width: auto;
 }
+
+@media (max-width: 480px) {
+    .userStatsBar {
+        width: 95%;
+        bottom: 15px;
+    }
+
+    .userStatsContent {
+        padding: 10px 16px;
+        border-radius: 50px;
+    }
+
+    .userStatsContent .rank {
+        font-size: 1rem;
+        margin-right: 10px;
+    }
+
+    .userStatsContent .address {
+        font-size: 0.9rem;
+    }
+
+    .userStatsContent .points {
+        font-size: 0.9rem;
+    }
+}
