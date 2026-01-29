@@ -175,6 +175,63 @@ button {
   --ock-error: #FF4444 !important;
 }
 
+/* --- Wallet Connection Options Styling --- */
+
+/* The Modal/Overlay background */
+.ock-connect-modal {
+  background: rgba(10, 10, 15, 0.98) !important;
+  backdrop-filter: blur(25px) !important;
+  border: 1px solid rgba(0, 212, 255, 0.2) !important;
+  border-radius: var(--border-radius-xl) !important;
+  box-shadow: 0 0 60px rgba(0, 0, 0, 1), 0 0 30px rgba(0, 82, 255, 0.1) !important;
+}
+
+/* Individual Wallet Option Button */
+.ock-wallet-option-button {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: var(--border-radius-lg) !important;
+  padding: 16px 20px !important;
+  margin-bottom: 12px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ock-wallet-option-button:hover {
+  background: rgba(0, 82, 255, 0.15) !important;
+  border-color: rgba(0, 212, 255, 0.5) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 82, 255, 0.2) !important;
+}
+
+/* Wallet Name within the option */
+.ock-wallet-name {
+  color: white !important;
+  font-weight: 800 !important;
+  font-size: 1.1rem !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Wallet Icon */
+.ock-wallet-icon {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Connect Modal Header */
+.ock-connect-modal-title {
+  font-family: var(--font-display) !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2px !important;
+  background: var(--gradient-blue) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  margin-bottom: 30px !important;
+  text-align: center !important;
+}
+
 /* Custom styling for the Identity, hover, and Copy Toast */
 .ock-identity-wrapper {
   padding: 12px !important;
