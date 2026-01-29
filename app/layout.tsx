@@ -29,6 +29,11 @@ export async function generateMetadata(): Promise<Metadata> {
         },
       }),
     },
+    icons: {
+      icon: '/logo.png',
+      shortcut: '/logo.png',
+      apple: '/logo.png',
+    },
   };
 }
 
