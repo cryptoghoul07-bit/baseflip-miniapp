@@ -152,24 +152,24 @@ button {
   }
 }
 
-/* OnchainKit Dark Theme Overrides */
+/* OnchainKit Dark Theme Overrides - FORCE APPLIED */
 :root {
-  --ock-bg-default: #0A0A0F;
-  --ock-bg-inverse: #FFFFFF;
-  --ock-bg-alternative: #14141E;
+  --ock-bg-default: #0A0A0F !important;
+  --ock-bg-inverse: #FFFFFF !important;
+  --ock-bg-alternative: #14141E !important;
 
-  --ock-text-primary: #FFFFFF;
-  --ock-text-secondary: #94A3B8;
-  --ock-text-inverse: #000000;
+  --ock-text-primary: #FFFFFF !important;
+  --ock-text-secondary: #94A3B8 !important;
+  --ock-text-inverse: #000000 !important;
 
-  --ock-border-line: rgba(255, 255, 255, 0.1);
-  --ock-border-radius: 24px;
-  --ock-border-radius-inner: 16px;
+  --ock-border-line: rgba(255, 255, 255, 0.1) !important;
+  --ock-border-radius: 24px !important;
+  --ock-border-radius-inner: 16px !important;
 
-  --ock-font-family: var(--font-body);
+  --ock-font-family: var(--font-body) !important;
 }
 
 [data-theme='dark'] {
-  --ock-bg-default: #0A0A0F;
-  --ock-bg-alternative: #14141E;
+  --ock-bg-default: #0A0A0F !important;
+  --ock-bg-alternative: #14141E !important;
 }
