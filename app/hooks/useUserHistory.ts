@@ -25,10 +25,10 @@ export function useUserHistory() {
         if (!address || !publicClient || !CONTRACT_ADDRESS) return;
 
         setIsLoading(true);
-        console.log(`[useUserHistory] Final Recon Sync. User: ${address}`);
+        console.log(`[useUserHistory] Final Reconstruction Sequence. User: ${address}`);
 
         try {
-            // 1. Get current round ID
+            // 1. Get current state
             const currentIdBn = await publicClient.readContract({
                 address: CONTRACT_ADDRESS,
                 abi: BaseFlipABI,
@@ -36,31 +36,38 @@ export function useUserHistory() {
             }) as bigint;
             const currentId = Number(currentIdBn);
 
-            // 2. Discovery Phase: Collect all points of interaction
-            // Since the contract has < 1000 rounds (currently ~13), we can scan EVERY round from memory
-            // This is 100% reliable for current state.
-            const roundsToScan = Array.from({ length: Math.min(currentId, 1000) }, (_, i) => currentId - i).filter(id => id > 0);
+            // 2. Scan ALL rounds in contract (1 to latest)
+            // Since currentId is very low (~13), this is the fastest and most reliable method
+            const roundsToScan = Array.from({ length: Math.min(currentId, 500) }, (_, i) => currentId - i).filter(id => id > 0);
 
-            // 3. Parallel Logs Scan (for archival data / already claimed wins)
+            // 3. Batch fetch round info and user stakes
+            const contracts: any[] = [];
+            roundsToScan.forEach(id => {
+                contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [BigInt(id)] });
+                contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
+            });
+
+            // 4. Parallel Logs Scan (Searching for historical interaction trails)
             const latestBlock = await publicClient.getBlockNumber();
             const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
             const claimEvent = BaseFlipABI.find(x => x.name === 'PayoutClaimed');
 
-            const logChunks = [];
-            const CHUNK_SIZE = 250000n; // 250k is very safe
-            for (let i = 0n; i < 8n; i++) {
+            const logPromises = [];
+            // Scan last 5 million blocks in 10 chunks (very thorough)
+            const CHUNK_SIZE = 500000n;
+            for (let i = 0n; i < 10n; i++) {
                 const to = latestBlock - (i * CHUNK_SIZE);
                 const from = to - CHUNK_SIZE > 0n ? to - CHUNK_SIZE : 0n;
                 if (to <= 0n) break;
 
-                logChunks.push(publicClient.getLogs({
+                logPromises.push(publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: stakeEvent as any,
                     fromBlock: from,
                     toBlock: to
                 }).catch(() => []));
 
-                logChunks.push(publicClient.getLogs({
+                logPromises.push(publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: claimEvent as any,
                     fromBlock: from,
@@ -68,25 +75,18 @@ export function useUserHistory() {
                 }).catch(() => []));
             }
 
-            // 4. Multicall for round state + user stakes
-            const contracts: any[] = [];
-            roundsToScan.forEach(id => {
-                contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [BigInt(id)] });
-                contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
-            });
-
-            const [allLogsResults, multicallResults] = await Promise.all([
-                Promise.all(logChunks),
-                publicClient.multicall({ contracts: contracts as any, allowFailure: true })
+            const [multicallResults, ...logChunks] = await Promise.all([
+                publicClient.multicall({ contracts: contracts as any, allowFailure: true }),
+                ...logPromises
             ]);
 
-            const allLogs = allLogsResults.flat() as any[];
+            const allLogs = logChunks.flat() as any[];
             const userAddressLower = address.toLowerCase();
 
-            // 5. Data Processing
+            // 5. Build History Map
             const finalMap = new Map<number, HistoryItem>();
 
-            // Process log data first (discovery of historical bets)
+            // First: Process Logs (Captures "amount" and "group" even for deleted state items)
             allLogs.forEach(log => {
                 if (!log?.args?.user || log.args.user.toLowerCase() !== userAddressLower) return;
 
@@ -95,21 +95,20 @@ export function useUserHistory() {
 
                 if (log.eventName === 'StakePlaced') {
                     finalMap.set(rid, {
-                        ...existing,
                         roundId: rid,
                         amount: formatEther(log.args.amount),
                         group: Number(log.args.group),
                         winningGroup: existing?.winningGroup || 0,
                         isCompleted: existing?.isCompleted || false,
-                        timestamp: existing?.timestamp || 0
+                        timestamp: existing?.timestamp || 0,
+                        payout: existing?.payout
                     });
                 } else if (log.eventName === 'PayoutClaimed') {
-                    // If we found a claim, the user definitely won this round
                     finalMap.set(rid, {
                         ...existing,
                         roundId: rid,
-                        amount: existing?.amount || '0', // Fallback if stake log missing
-                        group: existing?.group || 0, // Fallback
+                        amount: existing?.amount || '0',
+                        group: existing?.group || 0,
                         winningGroup: existing?.winningGroup || 0,
                         isCompleted: true,
                         timestamp: existing?.timestamp || 0,
@@ -118,7 +117,7 @@ export function useUserHistory() {
                 }
             });
 
-            // Augment and Verify with State Data
+            // Second: Merge with State Data (Verifies logs and adds missing outcomes)
             for (let i = 0; i < roundsToScan.length; i++) {
                 const rId = roundsToScan[i];
                 const rRes: any = multicallResults[i * 2];
@@ -128,45 +127,51 @@ export function useUserHistory() {
                     const r = rRes.result;
                     const s = sRes?.status === 'success' ? sRes.result : null;
 
-                    const curRoundId = rId;
                     const roundCompleted = Array.isArray(r) ? r[6] : (r as any).isCompleted;
                     const roundWinningGroup = Number(Array.isArray(r) ? r[8] : (r as any).winningGroup);
                     const roundTimestamp = Number(Array.isArray(r) ? r[4] : (r as any).createdAt);
 
-                    // Check if user has active/archived stake in current state
+                    // User stake from current contract memory
                     const stateAmt = s ? (Array.isArray(s) ? s[0] : (s as any).amount) : 0n;
                     const stateGrp = s ? (Array.isArray(s) ? Number(s[1]) : Number((s as any).group)) : 0;
 
                     const existing = finalMap.get(rId);
 
-                    // If user has a stake in state, OR they were in our logs
+                    // Intersection logic: If they are in logs OR have an active stake in memory
                     if (stateAmt > 0n || existing) {
                         const finalItem: HistoryItem = {
                             roundId: rId,
                             amount: stateAmt > 0n ? formatEther(stateAmt) : (existing?.amount || '0'),
-                            group: stateGrp > 0 ? stateGrp : (existing?.group || roundWinningGroup), // Assume winningGroup if they claimed
+                            group: stateGrp > 0 ? stateGrp : (existing?.group || 0),
                             winningGroup: roundWinningGroup,
                             isCompleted: roundCompleted,
-                            timestamp: roundTimestamp
+                            timestamp: roundTimestamp,
+                            payout: existing?.payout
                         };
 
-                        // Final check: Only add if we have some evidence of group/amount
-                        if (Number(finalItem.amount) > 0 || finalItem.group > 0) {
+                        // Fallback: If we know they claimed but stake log was missed, they MUST have beta on winningGroup
+                        if (finalItem.payout && finalItem.group === 0) {
+                            finalItem.group = finalItem.winningGroup;
+                        }
+
+                        // Sanity Check: If we have an amount or a group, this is a real record
+                        if (Number(finalItem.amount) > 0 || finalItem.group > 0 || finalItem.payout) {
                             finalMap.set(rId, finalItem);
                         }
                     }
                 }
             }
 
+            // 6. Convert to List and Filter out empty glitched entries
             const historyList = Array.from(finalMap.values())
-                .filter(item => Number(item.amount) > 0) // Hide zero-amount glitches
+                .filter(item => (Number(item.amount) > 0 || (item.payout && Number(item.payout) > 0)))
                 .sort((a, b) => b.roundId - a.roundId);
 
-            console.log(`[useUserHistory] Recon complete. Showing ${historyList.length} items.`);
+            console.log(`[useUserHistory] Sync Complete. Items reconstructed: ${historyList.length}`);
             setHistory(historyList);
 
         } catch (error) {
-            console.error("[useUserHistory] Fatal Sync Error:", error);
+            console.error("[useUserHistory] Recon Failure:", error);
         } finally {
             setIsLoading(false);
         }
