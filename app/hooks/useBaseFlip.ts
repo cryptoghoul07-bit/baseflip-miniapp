@@ -16,7 +16,9 @@ export interface RoundData {
     targetSize: bigint;
     isStarted: boolean;
     isCompleted: boolean;
+    winningGroup: number;
 }
+
 
 export interface UserStake {
     amount: bigint;
@@ -108,6 +110,7 @@ export function useBaseFlip() {
                 targetSize: (isArray ? data[4] : data.targetSize) as bigint,
                 isStarted: (isArray ? data[5] : data.isStarted) as boolean,
                 isCompleted: (isArray ? data[6] : data.isCompleted) as boolean,
+                winningGroup: Number(isArray ? data[8] ?? 0 : data.winningGroup ?? 0),
             });
         }
     }, [currentRound]);
