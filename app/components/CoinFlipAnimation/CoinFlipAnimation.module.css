@@ -89,6 +89,7 @@
     font-weight: 900;
     background: linear-gradient(90deg, #FFD700, #FFF, #FFD700);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
     text-transform: uppercase;
     letter-spacing: 2px;
