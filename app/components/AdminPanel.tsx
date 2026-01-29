@@ -59,14 +59,25 @@ export default function AdminPanel() {
         }
     }, [isSuccess, refetchFees]);
 
+    // Debugging Owner Check
+    useEffect(() => {
+        if (address && ownerAddress) {
+            console.log('[AdminPanel] Connected User:', address);
+            console.log('[AdminPanel] Contract Owner:', ownerAddress);
+            console.log('[AdminPanel] Match?', address.toLowerCase() === ownerAddress.toLowerCase());
+        }
+    }, [address, ownerAddress]);
+
     // Don't render while loading owner
     if (isLoadingOwner) {
-        return null;
+        // Optional: Show a tiny indicator for debugging
+        return <div style={{ position: 'fixed', bottom: 10, right: 10, fontSize: '0.7rem', opacity: 0.5 }}>Checking permissions...</div>;
     }
 
     // Only show if connected user is owner
     if (!address || !ownerAddress || address.toLowerCase() !== ownerAddress.toLowerCase()) {
-        return null;
+        console.warn('[AdminPanel] Access Denied. User:', address, 'Owner:', ownerAddress);
+        return null; // Return null to hide completely if not owner
     }
 
     const feesEth = fees ? formatEther(fees) : '0';
