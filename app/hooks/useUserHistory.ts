@@ -27,92 +27,89 @@ export function useUserHistory() {
 
         setIsLoading(true);
         try {
-            // 1. Get current round ID
-            const currentId = await publicClient.readContract({
-                address: CONTRACT_ADDRESS,
-                abi: BaseFlipABI,
-                functionName: 'currentRoundId',
-            }) as bigint;
+            const latestBlock = await publicClient.getBlockNumber();
+            const CHUNK_SIZE = 100000n; // 100k blocks
+            const MAX_BLOCKS = 3000000n; // Scan last ~2 months
+            const stopBlock = latestBlock > MAX_BLOCKS ? latestBlock - MAX_BLOCKS : 0n;
 
-            const maxId = Number(currentId);
-            const scanDepth = 1000; // Scan last 1000 rounds (very reliable via multicall)
-            const startId = Math.max(1, maxId - scanDepth);
+            const allUserLogs: any[] = [];
+            const stakePlacedEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
 
-            console.log(`[useUserHistory] Starting scan from ${maxId} down to ${startId}`);
+            console.log(`[useUserHistory] Starting Discovery Scan from ${latestBlock}`);
 
-            const foundHistory: HistoryItem[] = [];
-            const BATCH_SIZE = 100;
-
-            // Scan backwards in batches of 100
-            for (let end = maxId; end >= startId; end -= BATCH_SIZE) {
-                const batchStart = Math.max(startId, end - BATCH_SIZE + 1);
-                const contracts: any[] = [];
-
-                for (let id = end; id >= batchStart; id--) {
-                    // Check user stake
-                    contracts.push({
+            // Chunked Discovery (Bypasses RPC timeouts)
+            for (let to = latestBlock; to > stopBlock; to -= CHUNK_SIZE) {
+                const from = to - CHUNK_SIZE > 0n ? to - CHUNK_SIZE : 0n;
+                try {
+                    const logs = await publicClient.getLogs({
                         address: CONTRACT_ADDRESS,
-                        abi: BaseFlipABI,
-                        functionName: 'userStakes',
-                        args: [BigInt(id), address]
+                        event: stakePlacedEvent as any,
+                        args: { user: address },
+                        fromBlock: from,
+                        toBlock: to
                     });
-                    // Get round info (needed for status/time)
-                    contracts.push({
-                        address: CONTRACT_ADDRESS,
-                        abi: BaseFlipABI,
-                        functionName: 'rounds',
-                        args: [BigInt(id)]
-                    });
+                    if (logs.length > 0) allUserLogs.push(...logs);
+                } catch (e) {
+                    console.warn(`[useUserHistory] Skip block range ${from}-${to}`);
                 }
+                if (from <= stopBlock) break;
+            }
 
-                const results = await publicClient.multicall({
+            if (allUserLogs.length === 0) {
+                setHistory([]);
+                return;
+            }
+
+            // Group logs by roundId (unique rounds)
+            const sortedLogs = allUserLogs.reverse();
+            const roundIds = Array.from(new Set(sortedLogs.map(log => log.args.roundId)));
+
+            const BATCH_SIZE = 20;
+            const foundHistory: HistoryItem[] = [];
+
+            for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
+                const batch = roundIds.slice(i, i + BATCH_SIZE);
+                const contracts: any[] = batch.map(id => ({
+                    address: CONTRACT_ADDRESS,
+                    abi: BaseFlipABI,
+                    functionName: 'rounds',
+                    args: [id]
+                } as const));
+
+                const batchResults = await publicClient.multicall({
                     contracts,
                     allowFailure: true
                 });
 
-                // Results are in pairs: [Stake, Round], [Stake, Round]...
-                for (let j = 0; j < results.length; j += 2) {
-                    const stakeRes = results[j];
-                    const roundRes = results[j + 1];
-                    const roundId = end - (j / 2);
+                for (let j = 0; j < batchResults.length; j++) {
+                    const roundResult = batchResults[j];
+                    const roundIdBig = batch[j] as bigint;
+                    const relevantLogs = sortedLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
 
-                    if (stakeRes.status === 'success' && roundRes.status === 'success') {
-                        const s: any = stakeRes.result;
-                        const r: any = roundRes.result;
-
-                        const amountBn = Array.isArray(s) ? s[0] : s.amount;
-
-                        // If amount > 0, they participated and haven't claimed yet
-                        // (If it's 0, they either didn't play OR already claimed)
-                        if (amountBn > 0n) {
-                            const group = Array.isArray(s) ? Number(s[1]) : Number(s.group);
-                            const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
-                            const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
-                            const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
-
+                    if (roundResult.status === 'success') {
+                        const r: any = roundResult.result;
+                        relevantLogs.forEach(log => {
+                            const args = log.args;
                             foundHistory.push({
-                                roundId,
-                                amount: formatEther(amountBn),
-                                group,
-                                winningGroup,
-                                isCompleted,
-                                timestamp: createdAt
+                                roundId: Number(args.roundId),
+                                amount: formatEther(args.amount),
+                                group: Number(args.group),
+                                winningGroup: Number(Array.isArray(r) ? r[8] : r.winningGroup),
+                                isCompleted: Array.isArray(r) ? r[6] : r.isCompleted,
+                                timestamp: Number(Array.isArray(r) ? r[4] : r.createdAt)
                             });
-                        }
+                        });
                     }
                 }
-
-                // Set intermediate results so user sees something quickly
-                if (foundHistory.length > 0) {
-                    setHistory([...foundHistory]);
-                }
+                // Show items progressively
+                setHistory([...foundHistory]);
             }
 
-            console.log(`[useUserHistory] Final found items: ${foundHistory.length}`);
+            foundHistory.sort((a, b) => b.roundId - a.roundId);
             setHistory(foundHistory);
 
         } catch (error) {
-            console.error("Error scanning history:", error);
+            console.error("Discovery error:", error);
         } finally {
             setIsLoading(false);
         }
