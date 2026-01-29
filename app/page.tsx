@@ -46,28 +46,27 @@ export default function Home() {
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
 
-  // Track previous round completion state to trigger animation
-  const prevCompletedRef = useState<{ isCompleted: boolean } | null>(null);
-  // actually useState is not good for ref-like behavior in render loop logic comparison without effect interference.
-  // Converting back to useRef pattern but respecting React variable rules.
-  // Let's use standard hooks.
+  // Track the last round we animated so we don't re-animate on refresh
+  const lastAnimatedRoundRef = useState<string | null>(null);
+  // Actually, useRef is better for "instance variable" that doesn't trigger re-renders, 
+  // but if we want to ensure persistent logic across renders, let's use a state that we only update when we animate.
 
-  // We need to track the *previous* state of roundData to detect the edge.
-  const [prevRoundComplete, setPrevRoundComplete] = useState(false);
+  // Actually, let's use a simple heuristic:
+  // If we receive data saying round is completed, AND we haven't seen this specific round ID complete before in this session.
+  const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(null);
 
   useEffect(() => {
-    // If round transitions from NOT completed to COMPLETED, and we have a winner
-    if (roundData && roundData.isCompleted && !prevRoundComplete && roundData.winningGroup > 0) {
-      console.log("Triggering Flip Animation! Winner:", roundData.winningGroup);
-      setIsFlipping(true);
-      setFlipWinner(Number(roundData.winningGroup));
+    // If round is completed and legitimate winner
+    if (roundData && roundData.isCompleted && roundData.winningGroup > 0) {
+      // Check if we already animated THIS round
+      if (lastAnimatedId !== roundData.roundId) {
+        console.log("Triggering Flip Animation! new Round:", roundData.roundId, "Winner:", roundData.winningGroup);
+        setIsFlipping(true);
+        setFlipWinner(Number(roundData.winningGroup));
+        setLastAnimatedId(roundData.roundId); // Mark as animated
+      }
     }
-
-    // Update tracker
-    if (roundData) {
-      setPrevRoundComplete(roundData.isCompleted);
-    }
-  }, [roundData, prevRoundComplete]);
+  }, [roundData, lastAnimatedId]);
 
   const handleFlipComplete = () => {
     setIsFlipping(false);
