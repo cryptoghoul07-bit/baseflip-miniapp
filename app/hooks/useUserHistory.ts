@@ -26,44 +26,48 @@ export function useUserHistory() {
         if (!address || !publicClient || !CONTRACT_ADDRESS) return;
 
         setIsLoading(true);
-        setHistory([]); // Reset immediately for fresh state
+        setHistory([]); // Reset for fresh state
 
         try {
             const latestBlock = await publicClient.getBlockNumber();
-            const CHUNK_SIZE = 250000n;
+            const CHUNK_SIZE = 500000n;
             const eventAbi = BaseFlipABI.find(x => x.name === 'StakePlaced');
 
-            console.log(`[useUserHistory] Speed Scan started at block ${latestBlock}`);
+            console.log(`[useUserHistory] All-Time Discovery Scan started...`);
 
-            // Parallel lookup for last 1,000,000 blocks (4 chunks)
-            // This is significantly faster than sequential loops
-            const chunks = [0n, 1n, 2n, 3n].map(i => {
+            // Fetch ALL contract logs in parallel (5 chunks = 2.5M blocks)
+            // Local filtering is much more reliable than RPC-side filtering
+            const chunkPromises = [0n, 1n, 2n, 3n, 4n].map(i => {
                 const to = latestBlock - (i * CHUNK_SIZE);
                 const from = to - CHUNK_SIZE > 0n ? to - CHUNK_SIZE : 0n;
                 return publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: eventAbi as any,
-                    args: { user: address },
                     fromBlock: from,
                     toBlock: to
-                }).catch(() => [] as any[]); // Catch individual chunk failures
+                }).catch(() => []);
             });
 
-            const results = await Promise.all(chunks);
-            const allLogs = results.flat();
+            const results = await Promise.all(chunkPromises);
+            const allLogs = results.flat() as any[];
 
-            if (allLogs.length === 0) {
-                console.log("[useUserHistory] No activity found in last 1M blocks.");
+            // Filter locally by user address
+            const userLogs = allLogs.filter(log =>
+                log.args.user?.toLowerCase() === address.toLowerCase()
+            );
+
+            if (userLogs.length === 0) {
+                console.log("[useUserHistory] No activity found for:", address);
                 setHistory([]);
                 return;
             }
 
             // Extract Unique Round IDs
-            const roundIds = Array.from(new Set(allLogs.map(log => log.args.roundId)));
+            const roundIds = Array.from(new Set(userLogs.map(log => log.args.roundId)));
             const sortedRoundIds = roundIds.sort((a, b) => Number(BigInt(b) - BigInt(a))); // Newest first
 
-            // Fetch Outcomes via Multicall (Limit to last 30 rounds for UX speed)
-            const displayRounds = sortedRoundIds.slice(0, 30);
+            // Fetch Outcomes for found rounds
+            const displayRounds = sortedRoundIds.slice(0, 50);
 
             const contracts: any[] = displayRounds.map(id => ({
                 address: CONTRACT_ADDRESS,
@@ -82,7 +86,7 @@ export function useUserHistory() {
             for (let i = 0; i < batchResults.length; i++) {
                 const roundResult = batchResults[i];
                 const roundIdBig = displayRounds[i] as bigint;
-                const relevantLogs = allLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
+                const relevantLogs = userLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
 
                 if (roundResult.status === 'success') {
                     const r: any = roundResult.result;
@@ -103,7 +107,7 @@ export function useUserHistory() {
             setHistory(foundHistory);
 
         } catch (error) {
-            console.error("[useUserHistory] Fast Scan Failed:", error);
+            console.error("[useUserHistory] Discovery Failed:", error);
         } finally {
             setIsLoading(false);
         }
