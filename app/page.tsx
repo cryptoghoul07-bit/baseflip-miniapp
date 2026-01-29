@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { useAllUnclaimedWinnings } from "./hooks/useAllUnclaimedWinnings";
 import {
   ConnectWallet,
   Wallet,
@@ -75,6 +76,8 @@ export default function Home() {
     isLoading: isBaseFlipLoading,
     error: baseFlipError
   } = useBaseFlip();
+
+  const { claimableRounds, claimRound, isClaiming, scanForWinnings } = useAllUnclaimedWinnings();
 
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
@@ -194,17 +197,29 @@ export default function Home() {
             onSelectLevel={setSelectedLevel}
           />
 
-          {unclaimedRound && (
+          {claimableRounds.length > 0 && (
             <div className={styles.claimBanner}>
               <div className={styles.claimContent}>
-                <h3>🎉 You Won Round #{unclaimedRound.toString()}!</h3>
-                <button
-                  className={styles.claimButton}
-                  onClick={() => claimWinnings(unclaimedRound)}
-                  disabled={isClaiming}
-                >
-                  {isClaiming ? 'Claiming...' : 'Claim Winnings'}
-                </button>
+                <h3>🎉 You Have Unclaimed Winnings!</h3>
+                {claimableRounds.map((round) => (
+                  <div key={round.roundId.toString()} style={{ marginBottom: '10px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Round #{round.roundId.toString()}</span>
+                      <button
+                        className={styles.claimButton}
+                        onClick={() => {
+                          claimRound(round.roundId);
+                          // Optimistic update or refetch
+                          setTimeout(scanForWinnings, 5000);
+                        }}
+                        disabled={isClaiming}
+                        style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                      >
+                        Claim
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
