@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({
                 success: true,
                 running: isRunning,
-                contractAddress: process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS
+                contractAddress: process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76'
             });
         }
 
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
 async function startBot() {
     const privateKey = process.env.PRIVATE_KEY;
-    const contractAddress = process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS;
+    const contractAddress = process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76';
     const rpcUrl = process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
 
     if (!privateKey) {
