@@ -27,79 +27,92 @@ export function useUserHistory() {
 
         setIsLoading(true);
         try {
-            const currentBlock = await publicClient.getBlockNumber();
-            const fromBlock = currentBlock - 5000000n; // ~4 months
-
-            const stakePlacedEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
-
-            // Fetch ALL stake logs for the contract and filter locally to 
-            // bypass any potential RPC indexing/casing issues
-            const allLogs = await publicClient.getLogs({
+            // 1. Get current round ID
+            const currentId = await publicClient.readContract({
                 address: CONTRACT_ADDRESS,
-                event: stakePlacedEvent as any,
-                fromBlock: fromBlock > 0n ? fromBlock : 0n,
-                toBlock: 'latest'
-            }) as any[];
+                abi: BaseFlipABI,
+                functionName: 'currentRoundId',
+            }) as bigint;
 
-            // Filter locally by user address
-            const userLogs = allLogs.filter(log =>
-                log.args.user?.toLowerCase() === address.toLowerCase()
-            ).reverse();
+            const maxId = Number(currentId);
+            const scanDepth = 1000; // Scan last 1000 rounds (very reliable via multicall)
+            const startId = Math.max(1, maxId - scanDepth);
 
-            if (userLogs.length === 0) {
-                console.log("[useUserHistory] No logs found in range for:", address);
-                setHistory([]);
-                setIsLoading(false);
-                return;
-            }
+            console.log(`[useUserHistory] Starting scan from ${maxId} down to ${startId}`);
 
-            const roundIds = Array.from(new Set(userLogs.map(log => log.args.roundId)));
-            const BATCH_SIZE = 20; // Super safe batch size
             const foundHistory: HistoryItem[] = [];
+            const BATCH_SIZE = 100;
 
-            for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
-                const batch = roundIds.slice(i, i + BATCH_SIZE);
+            // Scan backwards in batches of 100
+            for (let end = maxId; end >= startId; end -= BATCH_SIZE) {
+                const batchStart = Math.max(startId, end - BATCH_SIZE + 1);
+                const contracts: any[] = [];
 
-                const contracts: any[] = batch.map(id => ({
-                    address: CONTRACT_ADDRESS,
-                    abi: BaseFlipABI,
-                    functionName: 'rounds',
-                    args: [id]
-                } as const));
+                for (let id = end; id >= batchStart; id--) {
+                    // Check user stake
+                    contracts.push({
+                        address: CONTRACT_ADDRESS,
+                        abi: BaseFlipABI,
+                        functionName: 'userStakes',
+                        args: [BigInt(id), address]
+                    });
+                    // Get round info (needed for status/time)
+                    contracts.push({
+                        address: CONTRACT_ADDRESS,
+                        abi: BaseFlipABI,
+                        functionName: 'rounds',
+                        args: [BigInt(id)]
+                    });
+                }
 
-                const batchResults = await publicClient.multicall({
+                const results = await publicClient.multicall({
                     contracts,
                     allowFailure: true
                 });
 
-                for (let j = 0; j < batchResults.length; j++) {
-                    const roundResult = batchResults[j];
-                    const roundIdBig = batch[j] as bigint;
-                    const relevantLogs = userLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
+                // Results are in pairs: [Stake, Round], [Stake, Round]...
+                for (let j = 0; j < results.length; j += 2) {
+                    const stakeRes = results[j];
+                    const roundRes = results[j + 1];
+                    const roundId = end - (j / 2);
 
-                    if (roundResult.status === 'success') {
-                        const r: any = roundResult.result;
+                    if (stakeRes.status === 'success' && roundRes.status === 'success') {
+                        const s: any = stakeRes.result;
+                        const r: any = roundRes.result;
 
-                        relevantLogs.forEach(log => {
-                            const args = log.args;
+                        const amountBn = Array.isArray(s) ? s[0] : s.amount;
+
+                        // If amount > 0, they participated and haven't claimed yet
+                        // (If it's 0, they either didn't play OR already claimed)
+                        if (amountBn > 0n) {
+                            const group = Array.isArray(s) ? Number(s[1]) : Number(s.group);
+                            const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
+                            const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
+                            const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
+
                             foundHistory.push({
-                                roundId: Number(args.roundId),
-                                amount: formatEther(args.amount),
-                                group: Number(args.group),
-                                winningGroup: Number(Array.isArray(r) ? r[8] : r.winningGroup),
-                                isCompleted: Array.isArray(r) ? r[6] : r.isCompleted,
-                                timestamp: Number(Array.isArray(r) ? r[4] : r.createdAt)
+                                roundId,
+                                amount: formatEther(amountBn),
+                                group,
+                                winningGroup,
+                                isCompleted,
+                                timestamp: createdAt
                             });
-                        });
+                        }
                     }
+                }
+
+                // Set intermediate results so user sees something quickly
+                if (foundHistory.length > 0) {
+                    setHistory([...foundHistory]);
                 }
             }
 
-            foundHistory.sort((a, b) => b.roundId - a.roundId);
+            console.log(`[useUserHistory] Final found items: ${foundHistory.length}`);
             setHistory(foundHistory);
 
         } catch (error) {
-            console.error("Error fetching history:", error);
+            console.error("Error scanning history:", error);
         } finally {
             setIsLoading(false);
         }

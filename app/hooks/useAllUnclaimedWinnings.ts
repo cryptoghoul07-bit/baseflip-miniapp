@@ -27,54 +27,37 @@ export function useAllUnclaimedWinnings() {
 
         setIsScanning(true);
         try {
-            const currentBlock = await publicClient.getBlockNumber();
-            const fromBlock = currentBlock - 5000000n; // ~4 months
-
-            // 1. Find all rounds the user ever participated in using logs
-            // Fetching all and filtering locally for maximum reliability
-            const stakePlacedEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
-            const allLogs = await publicClient.getLogs({
+            // 1. Get current round ID
+            const currentId = await publicClient.readContract({
                 address: CONTRACT_ADDRESS,
-                event: stakePlacedEvent as any,
-                fromBlock: fromBlock > 0n ? fromBlock : 0n,
-                toBlock: 'latest'
-            }) as any[];
+                abi: BaseFlipABI,
+                functionName: 'currentRoundId',
+            }) as bigint;
 
-            // Filter locally by user address
-            const userLogs = allLogs.filter(log =>
-                log.args.user?.toLowerCase() === address.toLowerCase()
-            );
-
-            if (userLogs.length === 0) {
-                setClaimableRounds([]);
-                return;
-            }
-
-            // 2. Get unique round IDs to check
-            const roundIds = Array.from(new Set(userLogs.map(l => l.args.roundId)));
-
-            // 3. Batched Multicall check: status of round and current stake mapping
-            const BATCH_SIZE = 20;
+            const maxId = Number(currentId);
+            const scanDepth = 500; // Scan last 500 rounds for unclaimed winnings
+            const startId = Math.max(1, maxId - scanDepth);
+            const BATCH_SIZE = 50;
             const allClaimable: ClaimableRound[] = [];
 
-            for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
-                const batch = roundIds.slice(i, i + BATCH_SIZE) as bigint[];
+            for (let end = maxId - 1; end >= startId; end -= BATCH_SIZE) {
+                const batchStart = Math.max(startId, end - BATCH_SIZE + 1);
                 const contracts: any[] = [];
 
-                batch.forEach(id => {
+                for (let id = end; id >= batchStart; id--) {
                     contracts.push({
                         address: CONTRACT_ADDRESS,
                         abi: BaseFlipABI,
                         functionName: 'rounds',
-                        args: [id]
+                        args: [BigInt(id)]
                     });
                     contracts.push({
                         address: CONTRACT_ADDRESS,
                         abi: BaseFlipABI,
                         functionName: 'userStakes',
-                        args: [id, address]
+                        args: [BigInt(id), address]
                     });
-                });
+                }
 
                 const results = await publicClient.multicall({
                     contracts,
@@ -84,7 +67,7 @@ export function useAllUnclaimedWinnings() {
                 for (let j = 0; j < results.length; j += 2) {
                     const rRes = results[j];
                     const sRes = results[j + 1];
-                    const roundId = batch[j / 2];
+                    const roundIdValue = BigInt(end - (j / 2));
 
                     if (rRes.status === 'success' && sRes.status === 'success') {
                         const r: any = rRes.result;
@@ -93,12 +76,12 @@ export function useAllUnclaimedWinnings() {
                         const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
                         const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
                         const stakedAmount = Array.isArray(s) ? s[0] : s.amount;
-                        const stakedGroup = Array.isArray(s) ? s[1] : s.group;
+                        const stakedGroup = Number(Array.isArray(s) ? s[1] : s.group);
 
                         // Unclaimed if: Completed AND winningGroup matched AND amount > 0
                         if (isCompleted && stakedAmount > 0n && stakedGroup === winningGroup) {
                             allClaimable.push({
-                                roundId,
+                                roundId: roundIdValue,
                                 amount: stakedAmount,
                                 winningGroup,
                                 userGroup: stakedGroup,
