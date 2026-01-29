@@ -13,20 +13,31 @@ export default function CoinFlipAnimation({ isFlipping, winningGroup, onAnimatio
     const [animationState, setAnimationState] = useState<'idle' | 'flipping' | 'result'>('idle');
 
     useEffect(() => {
-        if (isFlipping) {
-            setAnimationState('flipping');
-        } else if (winningGroup && animationState === 'flipping') {
-            // When flipping stops and we have a winner
-            setAnimationState('result');
-
-            // Allow time for the result animation to show before callback
-            const timer = setTimeout(() => {
-                onAnimationComplete?.();
-            }, 2000);
-            return () => clearTimeout(timer);
-        } else if (!isFlipping && !winningGroup) {
+        if (!isFlipping) {
             setAnimationState('idle');
+            return;
         }
+
+        // 1. Start Flipping
+        setAnimationState('flipping');
+
+        // 2. Wait for spin (1.5s), then show result
+        const spinTimer = setTimeout(() => {
+            if (winningGroup) {
+                setAnimationState('result');
+
+                // 3. Wait for result display (2.5s), then close
+                const closeTimer = setTimeout(() => {
+                    onAnimationComplete?.();
+                }, 2500);
+                return () => clearTimeout(closeTimer);
+            } else {
+                // Should not happen, but safe exit
+                onAnimationComplete?.();
+            }
+        }, 1500);
+
+        return () => clearTimeout(spinTimer);
     }, [isFlipping, winningGroup]);
 
     if (animationState === 'idle') return null;
