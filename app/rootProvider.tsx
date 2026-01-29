@@ -41,7 +41,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
           config={{
             appearance: {
               mode: "dark",
-              theme: "midnight", // Use 'midnight' or 'dark' base
+              theme: "base",
             },
             wallet: {
               display: "modal",
