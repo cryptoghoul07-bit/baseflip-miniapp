@@ -26,88 +26,132 @@ export function useUserHistory() {
         if (!address || !publicClient || !CONTRACT_ADDRESS) return;
 
         setIsLoading(true);
-        setHistory([]); // Reset for fresh state
+        console.log("[useUserHistory] Starting Hybrid History Sync for:", address);
 
         try {
+            // 1. Get current round ID for the "Direct Scan" range
+            const currentId = await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: BaseFlipABI,
+                functionName: 'currentRoundId',
+            }) as bigint;
+
+            const maxId = Number(currentId);
+            const RECENT_SCAN_DEPTH = 150n; // Scan last 150 rounds directly (bulletproof)
+            const startScanId = currentId > RECENT_SCAN_DEPTH ? currentId - RECENT_SCAN_DEPTH : 1n;
+
+            console.log(`[useUserHistory] Scanning rounds ${startScanId} to ${currentId} directly...`);
+
+            // 2. Prepare Direct Scans and Log Scans in Parallel
+            const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
             const latestBlock = await publicClient.getBlockNumber();
-            const CHUNK_SIZE = 500000n;
-            const eventAbi = BaseFlipABI.find(x => x.name === 'StakePlaced');
 
-            console.log(`[useUserHistory] All-Time Discovery Scan started...`);
+            // Multicall contracts for direct round/stake scan
+            const directContracts: any[] = [];
+            for (let id = currentId; id >= startScanId; id--) {
+                directContracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [id, address] });
+                directContracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [id] });
+            }
 
-            // Fetch ALL contract logs in parallel (5 chunks = 2.5M blocks)
-            // Local filtering is much more reliable than RPC-side filtering
-            const chunkPromises = [0n, 1n, 2n, 3n, 4n].map(i => {
-                const to = latestBlock - (i * CHUNK_SIZE);
-                const from = to - CHUNK_SIZE > 0n ? to - CHUNK_SIZE : 0n;
+            // Parallel Discovery Tasks
+            const chunkPromises = [0n, 1n, 2n, 3n, 4n, 5n, 6n, 7n, 8n, 9n].map(i => {
+                const to = latestBlock - (i * 500000n);
+                const from = to - 500000n > 0n ? to - 500000n : 0n;
                 return publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
-                    event: eventAbi as any,
+                    event: stakeEvent as any,
                     fromBlock: from,
                     toBlock: to
                 }).catch(() => []);
             });
 
-            const results = await Promise.all(chunkPromises);
-            const allLogs = results.flat() as any[];
+            const [directResults, ...logResults] = await Promise.all([
+                publicClient.multicall({ contracts: directContracts as any, allowFailure: true }).catch(() => []),
+                ...chunkPromises
+            ]);
 
-            // Filter locally by user address
-            const userLogs = allLogs.filter(log =>
-                log.args.user?.toLowerCase() === address.toLowerCase()
-            );
+            const finalHistoryMap = new Map<number, HistoryItem>();
 
-            if (userLogs.length === 0) {
-                console.log("[useUserHistory] No activity found for:", address);
-                setHistory([]);
-                return;
-            }
+            // 3. Process Direct Scan Results
+            if (Array.isArray(directResults)) {
+                for (let j = 0; j < directResults.length; j += 2) {
+                    const sRes: any = directResults[j];
+                    const rRes: any = directResults[j + 1];
+                    const rId = Number(currentId - BigInt(Math.floor(j / 2)));
 
-            // Extract Unique Round IDs
-            const roundIds = Array.from(new Set(userLogs.map(log => log.args.roundId)));
-            const sortedRoundIds = roundIds.sort((a, b) => Number(BigInt(b) - BigInt(a))); // Newest first
+                    if (sRes?.status === 'success' && rRes?.status === 'success' && sRes.result && rRes.result) {
+                        const s = sRes.result;
+                        const r = rRes.result;
+                        const amt = Array.isArray(s) ? s[0] : (s as any).amount;
 
-            // Fetch Outcomes for found rounds
-            const displayRounds = sortedRoundIds.slice(0, 50);
-
-            const contracts: any[] = displayRounds.map(id => ({
-                address: CONTRACT_ADDRESS,
-                abi: BaseFlipABI,
-                functionName: 'rounds',
-                args: [id]
-            } as const));
-
-            const batchResults = await publicClient.multicall({
-                contracts,
-                allowFailure: true
-            });
-
-            const foundHistory: HistoryItem[] = [];
-
-            for (let i = 0; i < batchResults.length; i++) {
-                const roundResult = batchResults[i];
-                const roundIdBig = displayRounds[i] as bigint;
-                const relevantLogs = userLogs.filter(l => BigInt(l.args.roundId) === roundIdBig);
-
-                if (roundResult.status === 'success') {
-                    const r: any = roundResult.result;
-                    relevantLogs.forEach(log => {
-                        const args = log.args;
-                        foundHistory.push({
-                            roundId: Number(args.roundId),
-                            amount: formatEther(args.amount),
-                            group: Number(args.group),
-                            winningGroup: Number(Array.isArray(r) ? r[8] : r.winningGroup),
-                            isCompleted: Array.isArray(r) ? r[6] : r.isCompleted,
-                            timestamp: Number(Array.isArray(r) ? r[4] : r.createdAt)
-                        });
-                    });
+                        if (amt && amt > 0n) {
+                            finalHistoryMap.set(rId, {
+                                roundId: rId,
+                                amount: formatEther(amt),
+                                group: Array.isArray(s) ? Number(s[1]) : Number((s as any).group),
+                                winningGroup: Number(Array.isArray(r) ? r[8] : (r as any).winningGroup),
+                                isCompleted: Array.isArray(r) ? r[6] : (r as any).isCompleted,
+                                timestamp: Number(Array.isArray(r) ? r[4] : (r as any).createdAt)
+                            });
+                        }
+                    }
                 }
             }
 
-            setHistory(foundHistory);
+            // 4. Process Log Results (Bypasses state deletion)
+            const allLogs = logResults.flat() as any[];
+            const userLogs = allLogs.filter(l => l?.args?.user?.toLowerCase() === address.toLowerCase());
+
+            console.log(`[useUserHistory] Sync found ${userLogs.length} logs for ${address}`);
+
+            if (userLogs.length > 0) {
+                // Find IDs not already captured by the direct scan range
+                const logRoundIds = Array.from(new Set(userLogs.map(l => BigInt(l.args.roundId))))
+                    .filter(id => id < startScanId)
+                    .slice(0, 40); // Limit to 40 historical rounds for speed
+
+                if (logRoundIds.length > 0) {
+                    const logContracts = logRoundIds.map(id => ({
+                        address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [id]
+                    }));
+
+                    const logRoundResults = await publicClient.multicall({
+                        contracts: logContracts as any,
+                        allowFailure: true
+                    }).catch(() => []);
+
+                    if (Array.isArray(logRoundResults)) {
+                        logRoundResults.forEach((roundRes: any, idx) => {
+                            if (roundRes?.status === 'success' && roundRes.result) {
+                                const rIdBig = logRoundIds[idx];
+                                const rIdNum = Number(rIdBig);
+                                const r = roundRes.result;
+                                const logsForRound = userLogs.filter(l => BigInt(l.args.roundId) === rIdBig);
+
+                                logsForRound.forEach(l => {
+                                    finalHistoryMap.set(rIdNum, {
+                                        roundId: rIdNum,
+                                        amount: formatEther(l.args.amount),
+                                        group: Number(l.args.group),
+                                        winningGroup: Number(Array.isArray(r) ? r[8] : (r as any).winningGroup),
+                                        isCompleted: Array.isArray(r) ? r[6] : (r as any).isCompleted,
+                                        timestamp: Number(Array.isArray(r) ? r[4] : (r as any).createdAt)
+                                    });
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
+            const finalHistoryArray = Array.from(finalHistoryMap.values())
+                .sort((a, b) => b.roundId - a.roundId);
+
+            console.log(`[useUserHistory] Final visible history items: ${finalHistoryArray.length}`);
+            setHistory(finalHistoryArray);
 
         } catch (error) {
-            console.error("[useUserHistory] Discovery Failed:", error);
+            console.error("[useUserHistory] Hybrid Sync Failed:", error);
         } finally {
             setIsLoading(false);
         }
