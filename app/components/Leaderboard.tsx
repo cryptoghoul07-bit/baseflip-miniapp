@@ -14,6 +14,13 @@ interface LeaderboardProps {
 }
 
 export default function Leaderboard({ leaderboard, currentUserAddress }: LeaderboardProps) {
+    // Find current user's entry
+    const userEntry = currentUserAddress
+        ? leaderboard.find(e => e.address.toLowerCase() === currentUserAddress.toLowerCase())
+        : null;
+
+    // We only show top 50 in the list to avoid clutter
+    const displayList = leaderboard.slice(0, 50);
     const shortenAddress = (addr: string) => {
         return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
     };
@@ -45,28 +52,61 @@ export default function Leaderboard({ leaderboard, currentUserAddress }: Leaderb
                     <p>🎰 No players yet. Join a round and start earning points!</p>
                 </div>
             ) : (
-                <div className={styles.leaderboardList}>
-                    {leaderboard.map((entry) => {
-                        const isCurrentUser = currentUserAddress?.toLowerCase() === entry.address.toLowerCase();
-                        return (
-                            <div
-                                key={entry.address}
-                                className={`${styles.leaderboardRow} ${isCurrentUser ? styles.currentUser : ''} ${entry.rank <= 3 ? styles.topThree : ''}`}
-                            >
-                                <div className={styles.rank}>
-                                    {getRankBadge(entry.rank)}
+                <>
+                    <div className={styles.leaderboardList}>
+                        {displayList.map((entry) => {
+                            const isCurrentUser = currentUserAddress?.toLowerCase() === entry.address.toLowerCase();
+                            return (
+                                <div
+                                    key={entry.address}
+                                    className={`${styles.leaderboardRow} ${isCurrentUser ? styles.currentUser : ''} ${entry.rank <= 3 ? styles.topThree : ''}`}
+                                >
+                                    <div className={styles.rank}>
+                                        {getRankBadge(entry.rank)}
+                                    </div>
+                                    <div className={styles.address}>
+                                        {shortenAddress(entry.address)}
+                                        {isCurrentUser && <span className={styles.youBadge}>You</span>}
+                                    </div>
+                                    <div className={styles.points}>
+                                        {entry.points} {entry.points === 1 ? 'point' : 'points'}
+                                    </div>
                                 </div>
-                                <div className={styles.address}>
-                                    {shortenAddress(entry.address)}
-                                    {isCurrentUser && <span className={styles.youBadge}>You</span>}
-                                </div>
-                                <div className={styles.points}>
-                                    {entry.points} {entry.points === 1 ? 'point' : 'points'}
-                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Sticky User Stats Bar */}
+                    {currentUserAddress && (
+                        <div className={styles.userStatsBar}>
+                            <div className={styles.userStatsContent}>
+                                {userEntry ? (
+                                    <>
+                                        <div className={styles.rank}>{userEntry.rank}</div>
+                                        <div className={styles.address}>
+                                            {shortenAddress(userEntry.address)}
+                                            <span className={styles.youBadge}>You</span>
+                                        </div>
+                                        <div className={styles.points}>
+                                            {userEntry.points} pts
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className={styles.rank}>-</div>
+                                        <div className={styles.address}>
+                                            {shortenAddress(currentUserAddress)}
+                                            <span className={styles.youBadge}>You</span>
+                                        </div>
+                                        <div className={styles.points} style={{ fontSize: '0.9rem', opacity: 0.8 }}>
+                                            Unranked (Play to join!)
+                                        </div>
+                                    </>
+                                )}
                             </div>
-                        );
-                    })}
-                </div>
+                        </div>
+                    )}
+                </>
             )}
 
             <div className={styles.rulesSection}>

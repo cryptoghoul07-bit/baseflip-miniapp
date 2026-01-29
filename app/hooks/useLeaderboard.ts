@@ -33,7 +33,7 @@ export function useLeaderboard() {
                 address: CONTRACT_ADDRESS,
                 abi: parseAbi(['function getLeaderboardTop(uint256) view returns (address[], uint256[])']),
                 functionName: 'getLeaderboardTop',
-                args: [10n] // Fetch top 10
+                args: [100n] // Fetch top 100 for better user ranking context
             });
 
             console.log('[Leaderboard] Raw Data:', data);
@@ -63,7 +63,9 @@ export function useLeaderboard() {
                     .filter((e): e is LeaderboardEntry => e !== null)
                     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
-                console.log('[Leaderboard] Processed entries:', entries);
+                // Slice to top 10 for main display, but keep full list for user lookup if needed
+                // actually Component handles display limit, hook provides data.
+                console.log('[Leaderboard] Processed entries:', entries.length);
                 setLeaderboard(entries);
             } else {
                 console.warn('[Leaderboard] Invalid data format returned:', data);

@@ -304,6 +304,8 @@
     .rulesSection {
         margin-top: 32px;
         padding: 24px;
+        margin-bottom: 80px;
+        /* Space for sticky footer */
     }
 
     .rulesSection h3 {
@@ -326,4 +328,59 @@
     .ruleContent p {
         font-size: 0.9rem;
     }
+}
+
+/* Sticky User Stats Bar */
+.userStatsBar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 600px;
+    z-index: 100;
+    pointer-events: none;
+    /* Let clicks pass through outside the box */
+}
+
+.userStatsContent {
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--neon-cyan);
+    border-radius: 100px;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+    pointer-events: auto;
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.userStatsContent .rank {
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    min-width: auto;
+    margin-right: 15px;
+}
+
+.userStatsContent .address {
+    color: white;
+}
+
+.userStatsContent .points {
+    color: var(--gold);
+    min-width: auto;
 }
