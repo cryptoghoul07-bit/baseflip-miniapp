@@ -27,7 +27,19 @@ export default function Home() {
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [mounted, setMounted] = useState(false);
   const { address, isConnected } = useAccount();
-  const { roundData, userStake, stake, isStaking, refetchRound, unclaimedRound, claimWinnings, isClaiming, lastWinner } = useBaseFlip();
+  const {
+    roundData,
+    userStake,
+    stake,
+    isStaking,
+    refetchRound,
+    unclaimedRound,
+    claimWinnings,
+    isClaiming,
+    lastWinner,
+    isLoading: isBaseFlipLoading,
+    error: baseFlipError
+  } = useBaseFlip();
 
   // Initialize the miniapp
   useEffect(() => {
@@ -179,10 +191,31 @@ export default function Home() {
             </>
           )}
 
-          {!roundData && (
+          {!roundData && !isBaseFlipLoading && !baseFlipError && (
             <div className={styles.loading}>
               <div className={styles.spinner} />
-              <p>Loading game data...</p>
+              <p>Preparing the table...</p>
+            </div>
+          )}
+
+          {!roundData && isBaseFlipLoading && (
+            <div className={styles.loading}>
+              <div className={styles.spinner} />
+              <p>Loading game data from Base...</p>
+            </div>
+          )}
+
+          {baseFlipError && (
+            <div className={styles.loading}>
+              <p>❌ Error loading game data</p>
+              <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>{(baseFlipError as any).message || 'Contract connection failed'}</p>
+              <button
+                onClick={() => refetchRound()}
+                className={styles.leaderboardLink}
+                style={{ marginTop: '20px' }}
+              >
+                🔄 Try Again
+              </button>
             </div>
           )}
         </div>

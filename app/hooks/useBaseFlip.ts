@@ -29,17 +29,33 @@ export function useBaseFlip() {
     const { address } = useAccount();
 
     // Read current round data
-    const { data: currentRound, refetch: refetchRound } = useReadContract({
+    const {
+        data: currentRound,
+        refetch: refetchRound,
+        isLoading: isLoadingRound,
+        error: roundError
+    } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: BaseFlipABI,
         functionName: 'getCurrentRound',
+        query: {
+            enabled: !!CONTRACT_ADDRESS,
+            refetchInterval: 10000, // Poll every 10s as a fallback
+        }
     });
 
     // Read user's stake
-    const { data: myStake, refetch: refetchStake } = useReadContract({
+    const {
+        data: myStake,
+        refetch: refetchStake,
+        isLoading: isLoadingStake
+    } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: BaseFlipABI,
         functionName: 'getMyStake',
+        query: {
+            enabled: !!CONTRACT_ADDRESS && !!address,
+        }
     });
 
     // Write contract functions
@@ -78,23 +94,32 @@ export function useBaseFlip() {
     // Update state when data changes
     useEffect(() => {
         if (currentRound) {
+            console.log('[useBaseFlip] currentRound data:', currentRound);
+
+            // Handle both array and object formats from wagmi/viem
+            const data = currentRound as any;
+            const isArray = Array.isArray(data);
+
             setRoundData({
-                roundId: currentRound[0] as bigint,
-                levelId: currentRound[1] as bigint,
-                poolA: currentRound[2] as bigint,
-                poolB: currentRound[3] as bigint,
-                targetSize: currentRound[4] as bigint,
-                isStarted: currentRound[5] as boolean,
-                isCompleted: currentRound[6] as boolean,
+                roundId: (isArray ? data[0] : data.roundId) as bigint,
+                levelId: (isArray ? data[1] : data.levelId) as bigint,
+                poolA: (isArray ? data[2] : data.poolA) as bigint,
+                poolB: (isArray ? data[3] : data.poolB) as bigint,
+                targetSize: (isArray ? data[4] : data.targetSize) as bigint,
+                isStarted: (isArray ? data[5] : data.isStarted) as boolean,
+                isCompleted: (isArray ? data[6] : data.isCompleted) as boolean,
             });
         }
     }, [currentRound]);
 
     useEffect(() => {
         if (myStake) {
+            const data = myStake as any;
+            const isArray = Array.isArray(data);
+
             setUserStake({
-                amount: myStake[0] as bigint,
-                group: myStake[1] as number,
+                amount: (isArray ? data[0] : data.amount) as bigint,
+                group: (isArray ? data[1] : data.group) as number,
             });
         }
     }, [myStake]);
@@ -185,18 +210,23 @@ export function useBaseFlip() {
 
     useEffect(() => {
         if (prevRound && prevUserStake) {
-            const [
-                levelId,
-                poolA,
-                poolB,
-                startTime,
-                createdAt,
-                isActive,
-                isCompleted,
-                isCancelled,
-                winningGroup
-            ] = prevRound as any;
-            const [amount, group] = prevUserStake as any;
+            const rowData = prevRound as any;
+            const stakeData = prevUserStake as any;
+            const isRowArray = Array.isArray(rowData);
+            const isStakeArray = Array.isArray(stakeData);
+
+            const levelId = isRowArray ? rowData[0] : rowData.levelId;
+            const poolA = isRowArray ? rowData[1] : rowData.poolA;
+            const poolB = isRowArray ? rowData[2] : rowData.poolB;
+            const roundStartTime = isRowArray ? rowData[3] : rowData.roundStartTime;
+            const createdAt = isRowArray ? rowData[4] : rowData.createdAt;
+            const isActive = isRowArray ? rowData[5] : rowData.isActive;
+            const isCompleted = isRowArray ? rowData[6] : rowData.isCompleted;
+            const isCancelled = isRowArray ? rowData[7] : rowData.isCancelled;
+            const winningGroup = isRowArray ? rowData[8] : rowData.winningGroup;
+
+            const amount = isStakeArray ? stakeData[0] : stakeData.amount;
+            const group = isStakeArray ? stakeData[1] : stakeData.group;
 
             // If round completed, user staked, group matches winner, and amount > 0 (not claimed)
             if (isCompleted && amount > 0n && winningGroup === group) {
@@ -211,13 +241,14 @@ export function useBaseFlip() {
     const [lastWinner, setLastWinner] = useState<{ id: bigint, group: number } | null>(null);
 
     useEffect(() => {
-        if (prevRound && (prevRound as any).length > 8) {
+        if (prevRound) {
             const data = prevRound as any;
-            // Direct index access: 
+            const isArray = Array.isArray(data);
+
             // 6: isCompleted
             // 8: winningGroup
-            const isRoundCompleted = data[6];
-            const roundWinningGroup = data[8];
+            const isRoundCompleted = isArray ? data[6] : data.isCompleted;
+            const roundWinningGroup = isArray ? data[8] : data.winningGroup;
 
             console.log(`[useBaseFlip] PrevRound Update: ID=${prevRoundId}, Completed=${isRoundCompleted}, Winner=${roundWinningGroup}`);
 
@@ -238,6 +269,8 @@ export function useBaseFlip() {
         getExpectedMultiplier,
         isStaking,
         isClaiming,
+        isLoading: isLoadingRound || isLoadingStake,
+        error: roundError,
         refetchRound,
         refetchStake,
         unclaimedRound,

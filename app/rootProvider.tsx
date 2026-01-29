@@ -3,12 +3,19 @@ import { ReactNode } from "react";
 import { baseSepolia } from "wagmi/chains";
 import { OnchainKitProvider } from "@coinbase/onchainkit";
 import { WagmiProvider, createConfig, http } from "wagmi";
+import { coinbaseWallet } from "wagmi/connectors";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@coinbase/onchainkit/styles.css";
 
-// Create wagmi config with custom transport
+// Create wagmi config with connectors and custom transport
 const config = createConfig({
   chains: [baseSepolia],
+  connectors: [
+    coinbaseWallet({
+      appName: process.env.NEXT_PUBLIC_PROJECT_NAME || "BaseFlip",
+      preference: "all",
+    }),
+  ],
   transports: {
     [baseSepolia.id]: http(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org"),
   },
