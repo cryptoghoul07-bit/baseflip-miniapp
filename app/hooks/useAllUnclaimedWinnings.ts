@@ -27,81 +27,92 @@ export function useAllUnclaimedWinnings() {
 
         setIsScanning(true);
         try {
-            // 1. Get current round ID to know where to start scanning backwards from
-            const currentId = await publicClient.readContract({
+            // 1. Find all rounds the user ever participated in using logs
+            const stakeLogs = await publicClient.getLogs({
                 address: CONTRACT_ADDRESS,
-                abi: BaseFlipABI,
-                functionName: 'currentRoundId',
-            }) as bigint;
-
-            const id = Number(currentId);
-            // Scan last 50 rounds (practical limit for MVP without subgraph)
-            const scanDepth = 50;
-            const startId = Math.max(1, id - scanDepth);
-
-            const checks = [];
-
-            // We need to check: 
-            // 1. Did the user stake? (userStakes[roundId][user])
-            // 2. Is the round completed? (rounds[roundId])
-            // 3. Did they win?
-            // 4. Have they NOT claimed yet? (stake.amount > 0)
-
-            // We can batch these reads using multicall if available, or parallel promises
-            for (let i = startId; i < id; i++) { // Strictly less than currentId (current is playing)
-                const roundId = BigInt(i);
-
-                checks.push(
-                    Promise.all([
-                        publicClient.readContract({
-                            address: CONTRACT_ADDRESS,
-                            abi: BaseFlipABI,
-                            functionName: 'rounds',
-                            args: [roundId]
-                        }),
-                        publicClient.readContract({
-                            address: CONTRACT_ADDRESS,
-                            abi: BaseFlipABI,
-                            functionName: 'userStakes',
-                            args: [roundId, address]
-                        })
-                    ]).then(([roundData, userStake]) => ({ roundId, roundData, userStake }))
-                );
-            }
-
-            const results = await Promise.all(checks);
-            const found: ClaimableRound[] = [];
-
-            results.forEach(({ roundId, roundData, userStake }) => {
-                const r: any = roundData;
-                const s: any = userStake;
-
-                // Parse Round Data
-                const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
-                const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
-
-                // Parse Stake Data
-                const stakedAmount = Array.isArray(s) ? s[0] : s.amount;
-                const stakedGroup = Array.isArray(s) ? s[1] : s.group;
-
-                // CONDITION: Round Completed AND User Staked > 0 AND User Picked Winner
-                // If they claimed, stakedAmount would be 0.
-                if (isCompleted && stakedAmount > 0n && stakedGroup === winningGroup) {
-                    found.push({
-                        roundId,
-                        amount: stakedAmount,
-                        winningGroup,
-                        userGroup: stakedGroup,
-                        isCompleted
-                    });
-                }
+                event: {
+                    type: 'event',
+                    name: 'StakePlaced',
+                    inputs: [
+                        { type: 'uint256', indexed: true, name: 'roundId' },
+                        { type: 'address', indexed: true, name: 'user' },
+                        { type: 'uint8', indexed: false, name: 'group' },
+                        { type: 'uint256', indexed: false, name: 'amount' }
+                    ]
+                },
+                args: { user: address },
+                fromBlock: 0n,
+                toBlock: 'latest'
             });
 
-            console.log("Unclaimed winnings scan complete. Found:", found.length);
-            setClaimableRounds(found);
+            if (stakeLogs.length === 0) {
+                setClaimableRounds([]);
+                return;
+            }
+
+            // 2. Get unique round IDs to check
+            const roundIds = Array.from(new Set(stakeLogs.map(l => (l.args as any).roundId)));
+
+            // 3. Batched Multicall check: status of round and current stake mapping
+            const BATCH_SIZE = 50;
+            const allClaimable: ClaimableRound[] = [];
+
+            for (let i = 0; i < roundIds.length; i += BATCH_SIZE) {
+                const batch = roundIds.slice(i, i + BATCH_SIZE);
+                const contracts: any[] = [];
+
+                batch.forEach(id => {
+                    contracts.push({
+                        address: CONTRACT_ADDRESS,
+                        abi: BaseFlipABI,
+                        functionName: 'rounds',
+                        args: [id]
+                    });
+                    contracts.push({
+                        address: CONTRACT_ADDRESS,
+                        abi: BaseFlipABI,
+                        functionName: 'userStakes',
+                        args: [id, address]
+                    });
+                });
+
+                const results = await publicClient.multicall({
+                    contracts,
+                    allowFailure: true
+                });
+
+                for (let j = 0; j < results.length; j += 2) {
+                    const rRes = results[j];
+                    const sRes = results[j + 1];
+                    const roundId = batch[j / 2];
+
+                    if (rRes.status === 'success' && sRes.status === 'success') {
+                        const r: any = rRes.result;
+                        const s: any = sRes.result;
+
+                        const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
+                        const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
+                        const stakedAmount = Array.isArray(s) ? s[0] : s.amount;
+                        const stakedGroup = Array.isArray(s) ? s[1] : s.group;
+
+                        // Unclaimed if: Completed AND winningGroup matched AND amount > 0
+                        if (isCompleted && stakedAmount > 0n && stakedGroup === winningGroup) {
+                            allClaimable.push({
+                                roundId,
+                                amount: stakedAmount,
+                                winningGroup,
+                                userGroup: stakedGroup,
+                                isCompleted
+                            });
+                        }
+                    }
+                }
+            }
+
+            setClaimableRounds(allClaimable);
 
         } catch (error) {
-            console.error("Error scanning for winnings:", error);
+            console.error("Error scanning for unclaimed winnings:", error);
         } finally {
             setIsScanning(false);
         }

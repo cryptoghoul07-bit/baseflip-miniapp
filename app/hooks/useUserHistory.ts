@@ -27,18 +27,14 @@ export function useUserHistory() {
 
         setIsLoading(true);
         try {
-            const blockNumber = await publicClient.getBlockNumber();
-            // Scan last 500,000 blocks (~1.5 weeks on Base)
-            // This prevents "Method not allowed" or timeouts on public RPCs for 'earliest'
-            const fromBlock = blockNumber - 500000n;
-
+            // Scan from block 0 for "True All Time" history on Base Sepolia
             const logs = await publicClient.getLogs({
                 address: CONTRACT_ADDRESS,
                 event: parseAbiItem('event StakePlaced(uint256 indexed roundId, address indexed user, uint8 group, uint256 amount)'),
                 args: {
                     user: address
                 },
-                fromBlock: fromBlock > 0n ? fromBlock : 0n,
+                fromBlock: 0n,
                 toBlock: 'latest'
             });
 
