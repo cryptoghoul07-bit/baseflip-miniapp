@@ -23,6 +23,39 @@ import AdminPanel from "./components/AdminPanel";
 import WelcomeModal from "./components/WelcomeModal/WelcomeModal";
 import CoinFlipAnimation from "./components/CoinFlipAnimation/CoinFlipAnimation";
 import styles from "./page.module.css";
+import { usePlatformStats } from "./hooks/usePlatformStats";
+import { useEthPrice } from "./hooks/useEthPrice";
+
+// Internal component for stats to keep page clean
+function PlatformStatsBanner() {
+  const { totalVolume, isLoading } = usePlatformStats();
+  const { convertEthToUsd } = useEthPrice();
+
+  if (isLoading) return null;
+
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '8px 16px',
+      background: 'rgba(255, 255, 255, 0.03)',
+      borderRadius: '20px',
+      margin: '0 auto 20px',
+      width: 'fit-content',
+      border: '1px solid rgba(255, 255, 255, 0.05)'
+    }}>
+      <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Total Volume:</span>
+      <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: '#00D4FF' }}>
+        {Number(totalVolume).toFixed(4)} ETH
+      </span>
+      <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
+        ({convertEthToUsd(totalVolume)})
+      </span>
+    </div>
+  );
+}
 
 export default function Home() {
   const { isFrameReady, setFrameReady } = useMiniKit();
@@ -142,6 +175,8 @@ export default function Home() {
           </Wallet>
         </div>
       </div>
+
+      <PlatformStatsBanner />
 
       {!mounted ? (
         <div className={styles.loading}>
