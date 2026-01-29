@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { usePublicClient, useAccount, useWriteContract } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, parseAbiItem } from 'viem';
 import BaseFlipABI from '../lib/BaseFlipABI.json';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
@@ -30,16 +30,7 @@ export function useAllUnclaimedWinnings() {
             // 1. Find all rounds the user ever participated in using logs
             const stakeLogs = await publicClient.getLogs({
                 address: CONTRACT_ADDRESS,
-                event: {
-                    type: 'event',
-                    name: 'StakePlaced',
-                    inputs: [
-                        { type: 'uint256', indexed: true, name: 'roundId' },
-                        { type: 'address', indexed: true, name: 'user' },
-                        { type: 'uint8', indexed: false, name: 'group' },
-                        { type: 'uint256', indexed: false, name: 'amount' }
-                    ]
-                },
+                event: parseAbiItem('event StakePlaced(uint256 indexed roundId, address indexed user, uint8 group, uint256 amount)'),
                 args: { user: address },
                 fromBlock: 0n,
                 toBlock: 'latest'
