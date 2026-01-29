@@ -175,13 +175,30 @@ button {
   --ock-error: #FF4444 !important;
 }
 
-/* Custom styling for the Identity hover and Copy Toast */
-:global(.ock-identity-wrapper:hover) {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-radius: 12px !important;
+/* Custom styling for the Identity, hover, and Copy Toast */
+.ock-identity-wrapper {
+  padding: 12px !important;
+  border-radius: var(--border-radius-md) !important;
+  transition: background 0.2s ease !important;
 }
 
-:global(.ock-copy-toast) {
+.ock-identity-wrapper:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.ock-identity-name {
+  color: white !important;
+  font-weight: 800 !important;
+  font-size: 1.1rem !important;
+}
+
+.ock-identity-address {
+  color: #94A3B8 !important;
+  font-family: monospace !important;
+  opacity: 0.8 !important;
+}
+
+.ock-copy-toast {
   background: var(--gradient-blue) !important;
   color: white !important;
   border-radius: 20px !important;
