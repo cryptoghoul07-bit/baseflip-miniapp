@@ -45,13 +45,13 @@
 }
 
 .heads {
-    background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
-    color: #000;
+    background: linear-gradient(135deg, #0052FF 0%, #002266 100%);
+    color: #fff;
     transform: rotateY(0deg);
 }
 
 .tails {
-    background: linear-gradient(135deg, #0052FF 0%, #002266 100%);
+    background: linear-gradient(135deg, #FF0000 0%, #8B0000 100%);
     color: #fff;
     transform: rotateY(180deg);
 }
