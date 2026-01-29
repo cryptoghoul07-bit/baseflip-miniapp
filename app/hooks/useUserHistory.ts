@@ -27,86 +27,86 @@ export function useUserHistory() {
 
         setIsLoading(true);
         try {
-            // 1. Get current round ID
-            const currentId = await publicClient.readContract({
+            // 1. Fetch "StakePlaced" events for the current user
+            // This persists even after claiming/reclaiming, unlike the mapping
+            const logs = await publicClient.getLogs({
+                address: CONTRACT_ADDRESS,
+                event: {
+                    type: 'event',
+                    name: 'StakePlaced',
+                    inputs: [
+                        { type: 'uint256', indexed: true, name: 'roundId' },
+                        { type: 'address', indexed: true, name: 'user' },
+                        { type: 'uint8', indexed: false, name: 'group' },
+                        { type: 'uint256', indexed: false, name: 'amount' }
+                    ]
+                },
+                args: {
+                    user: address
+                },
+                fromBlock: 'earliest', // Scan from start. If slow, we might need to block-limit or paginate
+                toBlock: 'latest'
+            });
+
+            // 2. Extract unique rounds and details from logs
+            // Reverse to show newest first
+            const sortedLogs = logs.reverse();
+
+            if (sortedLogs.length === 0) {
+                setHistory([]);
+                setIsLoading(false);
+                return;
+            }
+
+            // 3. Multicall to get the STATUS of these rounds (who won?)
+            const roundIds = sortedLogs.map(log => (log.args as any).roundId);
+
+            const contracts: any[] = roundIds.map(id => ({
                 address: CONTRACT_ADDRESS,
                 abi: BaseFlipABI,
-                functionName: 'currentRoundId',
-            }) as bigint;
+                functionName: 'rounds',
+                args: [id]
+            } as const));
 
-            const id = Number(currentId);
-            setHistory([]); // Clear previous
-            const BATCH_SIZE = 50; // 50 rounds * 2 calls = 100 calls per batch (safer limit)
+            const roundResults = await publicClient.multicall({
+                contracts,
+                allowFailure: true
+            });
 
-            // Loop backwards from currentId to 1 in chunks
-            for (let end = id; end >= 1; end -= BATCH_SIZE) {
-                const start = Math.max(1, end - BATCH_SIZE + 1);
-                const contracts: any[] = [];
+            const foundHistory: HistoryItem[] = [];
 
-                // Build batch (reverse order within batch to keep sorting)
-                for (let i = end; i >= start; i--) {
-                    contracts.push({
-                        address: CONTRACT_ADDRESS,
-                        abi: BaseFlipABI,
-                        functionName: 'rounds',
-                        args: [BigInt(i)]
+            for (let i = 0; i < sortedLogs.length; i++) {
+                const log = sortedLogs[i];
+                const roundResult = roundResults[i];
+                const args = log.args as any;
+
+                if (roundResult.status === 'success') {
+                    const r: any = roundResult.result;
+
+                    const roundId = Number(args.roundId);
+                    const stakeAmount = args.amount;
+                    const stakeGroup = args.group;
+
+                    // Round Data
+                    const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
+                    const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
+                    const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
+
+                    foundHistory.push({
+                        roundId,
+                        amount: formatEther(stakeAmount),
+                        group: stakeGroup,
+                        winningGroup,
+                        isCompleted,
+                        timestamp: createdAt
                     });
-                    contracts.push({
-                        address: CONTRACT_ADDRESS,
-                        abi: BaseFlipABI,
-                        functionName: 'userStakes',
-                        args: [BigInt(i), address]
-                    });
-                }
-
-                const results = await publicClient.multicall({
-                    contracts,
-                    allowFailure: true
-                });
-
-                const batchFound: HistoryItem[] = [];
-
-                for (let i = 0; i < results.length; i += 2) {
-                    const roundResult = results[i];
-                    const stakeResult = results[i + 1];
-
-                    // Correct ID calculation
-                    // In this inner loop, we pushed: end, end-1, end-2...
-                    // So index 0 matches 'end', index 2 matches 'end-1'
-                    const offset = i / 2;
-                    const roundId = end - offset;
-
-                    if (roundResult.status === 'success' && stakeResult.status === 'success') {
-                        const r: any = roundResult.result;
-                        const s: any = stakeResult.result;
-                        const stakeAmount = Array.isArray(s) ? s[0] : s.amount;
-
-                        if (stakeAmount > 0n) {
-                            const stakeGroup = Array.isArray(s) ? s[1] : s.group;
-                            const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
-                            const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
-                            const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
-
-                            batchFound.push({
-                                roundId,
-                                amount: formatEther(stakeAmount),
-                                group: stakeGroup,
-                                winningGroup,
-                                isCompleted,
-                                timestamp: createdAt
-                            });
-                        }
-                    }
-                }
-
-                // Append this batch to history immediately so user sees data loading
-                if (batchFound.length > 0) {
-                    setHistory(prev => [...prev, ...batchFound]);
                 }
             }
 
+            setHistory(foundHistory);
+
         } catch (error) {
-            console.error("Error fetching history:", error);
+            console.error("Error fetching history via logs:", error);
         } finally {
             setIsLoading(false);
         }
