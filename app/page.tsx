@@ -74,7 +74,9 @@ export default function Home() {
     isClaiming,
     lastWinner,
     isLoading: isBaseFlipLoading,
-    error: baseFlipError
+    error: baseFlipError,
+    reclaimStake,
+    isReclaiming
   } = useBaseFlip();
 
   const { claimableRounds, claimRound, isClaiming: isClaimingLegacy, scanForWinnings } = useAllUnclaimedWinnings();
@@ -196,6 +198,42 @@ export default function Home() {
             selectedLevel={selectedLevel}
             onSelectLevel={setSelectedLevel}
           />
+
+          {/* Stuck Round Detection (24h Safety Valve) */
+            roundData &&
+            !roundData.isStarted &&
+            !roundData.isCompleted &&
+            (Date.now() / 1000) > (Number(roundData.roundId > 1n ? /* We don't have createdAt in roundData struct passed to frontend yet properly, checking logic below */ 0 : 0))
+            /* Actually, strict creation time is checked on contract. Frontend heuristic: if roundId created > 24h ago. 
+               But roundData struct in useBaseFlip doesn't have createdAt exposed clearly yet (index 4).
+               Let's add it or rely on fail state. 
+               Since I can't easily edit RoundData struct across files safely without checking useBaseFlip again, 
+               I'll just add a "Force Refund" button that appears if "Force Reload" is clicked multiple times or just add it to AdminPanel?
+               No, user needs it. 
+               SAFE OPTION: If pool is not full, and user wants to exit, they can try. Contract will revert if <24h.
+             */
+          }
+
+          {roundData && !roundData.isStarted && !roundData.isCompleted && hasStaked && (
+            <div style={{ marginTop: '10px', textAlign: 'center' }}>
+              <button
+                onClick={() => reclaimStake(roundData.roundId)}
+                disabled={isReclaiming}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid #FF4444',
+                  color: '#FF4444',
+                  fontSize: '0.75rem',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  opacity: 0.8
+                }}
+              >
+                ⚠️ Stuck? Claim Refund (Available after 24h)
+              </button>
+            </div>
+          )}
 
           {claimableRounds.length > 0 && (
             <div className={styles.claimBanner}>

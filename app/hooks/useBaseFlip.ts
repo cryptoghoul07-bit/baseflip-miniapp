@@ -63,6 +63,7 @@ export function useBaseFlip() {
     // Write contract functions
     const { writeContract: stakeWrite, isPending: isStaking } = useWriteContract();
     const { writeContract: claimWrite, isPending: isClaiming } = useWriteContract();
+    const { writeContract: reclaimWrite, isPending: isReclaiming } = useWriteContract();
 
     // Watch for events
     useWatchContractEvent({
@@ -154,6 +155,21 @@ export function useBaseFlip() {
             });
         } catch (error) {
             console.error('Error claiming winnings:', error);
+            throw error;
+        }
+    };
+
+    // Reclaim stuck stake function
+    const reclaimStake = async (roundId: bigint) => {
+        try {
+            reclaimWrite({
+                address: CONTRACT_ADDRESS,
+                abi: BaseFlipABI,
+                functionName: 'reclaimStake',
+                args: [roundId],
+            });
+        } catch (error) {
+            console.error('Error reclaiming stake:', error);
             throw error;
         }
     };
@@ -277,6 +293,8 @@ export function useBaseFlip() {
         refetchRound,
         refetchStake,
         unclaimedRound,
-        lastWinner, // Export this
+        lastWinner,
+        reclaimStake,
+        isReclaiming
     };
 }
