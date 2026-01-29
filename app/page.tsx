@@ -271,6 +271,16 @@ export default function Home() {
 
       <footer className={styles.footer}>
         <p>Built on Base • Play responsibly</p>
+        <button
+          onClick={() => {
+            console.log("Manual trigger flip!");
+            setIsFlipping(true);
+            setFlipWinner(1);
+          }}
+          style={{ opacity: 0.1, fontSize: '10px' }}
+        >
+          DEBUG: Test Flip
+        </button>
       </footer>
 
       <WinnersFeed />
