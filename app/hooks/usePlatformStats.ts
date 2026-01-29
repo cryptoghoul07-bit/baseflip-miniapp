@@ -35,8 +35,16 @@ export function usePlatformStats() {
                 // This batches all round reads into a single RPC call (or a few batches)
                 // supporting thousands of rounds efficiently.
 
+                // 3. Safety Cap: Only fetch last 1000 rounds to prevent execution time explosion
+                const startId = Math.max(1, id - 1000); // Max history depth
+
                 const contracts: any[] = [];
                 for (let i = 1; i <= id; i++) {
+                    // Optimization: If id > 1000, start from id - 1000? 
+                    // No, loop above starts at 1. We must change loop start.
+                }
+
+                for (let i = startId; i <= id; i++) {
                     contracts.push({
                         address: CONTRACT_ADDRESS,
                         abi: BaseFlipABI,
