@@ -25,82 +25,100 @@ export function useUserHistory() {
         if (!address || !publicClient || !CONTRACT_ADDRESS) return;
 
         setIsLoading(true);
-        console.log("[useUserHistory] Deep Intelligence Sync started for:", address);
+        console.log(`[useUserHistory] Starting Ultra Sync for Address: ${address}`);
+        console.log(`[useUserHistory] Contract: ${CONTRACT_ADDRESS}`);
 
         try {
-            const currentId = await publicClient.readContract({
+            const currentIdBn = await publicClient.readContract({
                 address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'currentRoundId'
             }) as bigint;
+            const currentId = Number(currentIdBn);
 
             const latestBlock = await publicClient.getBlockNumber();
             const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
             const claimEvent = BaseFlipABI.find(x => x.name === 'PayoutClaimed');
 
-            // 1. Parallel Task: Scan for both Placement and Claims (High Reliability)
-            const chunkCount = 12; // ~140 days
-            const chunkSize = 500000n;
-
-            const logPromises = [];
-            for (let i = 0n; i < BigInt(chunkCount); i++) {
+            // 1. Log Discovery (Massive block range, 8 million blocks)
+            // Parallel fetch WITHOUT user filter for maximum reliability
+            const lookbackBlocks = 8000000n;
+            const chunkSize = 1000000n; // 1M blocks is usually fine for Base Sepolia
+            const chunks = [];
+            for (let i = 0n; i < 8n; i++) {
                 const to = latestBlock - (i * chunkSize);
                 const from = to - chunkSize > 0n ? to - chunkSize : 0n;
+                if (to <= 0n) break;
 
-                // Fetch Stake events with address filter (very fast on most RPCs)
-                logPromises.push(
+                chunks.push(
                     publicClient.getLogs({
                         address: CONTRACT_ADDRESS,
                         event: stakeEvent as any,
-                        args: { user: address },
                         fromBlock: from,
                         toBlock: to
                     }).catch(() => [])
                 );
-                // Fetch Claim events with address filter
-                logPromises.push(
+                chunks.push(
                     publicClient.getLogs({
                         address: CONTRACT_ADDRESS,
                         event: claimEvent as any,
-                        args: { user: address },
                         fromBlock: from,
                         toBlock: to
                     }).catch(() => [])
                 );
             }
 
-            const rawChunks = await Promise.all(logPromises);
-            const allLogs = rawChunks.flat() as any[];
+            const rawLogResults = await Promise.all(chunks);
+            const allLogs = rawLogResults.flat() as any[];
 
-            // 2. Map of Round Discovery
+            // Filter logs locally in JS for 100% reliability
+            const userAddressLower = address.toLowerCase();
+            const userStakeLogs = allLogs.filter(l =>
+                l.eventName === 'StakePlaced' &&
+                l.args.user?.toLowerCase() === userAddressLower
+            );
+            const userClaimLogs = allLogs.filter(l =>
+                l.eventName === 'PayoutClaimed' &&
+                l.args.user?.toLowerCase() === userAddressLower
+            );
+
+            console.log(`[useUserHistory] Found ${userStakeLogs.length} stakes and ${userClaimLogs.length} claims in logs.`);
+
+            // 2. Discover Round IDs
             const discoveryMap = new Map<number, { amount: string, group: number }>();
 
-            // First pass: Process stakes
-            allLogs.filter(l => l.eventName === 'StakePlaced').forEach(l => {
+            userStakeLogs.forEach(l => {
                 discoveryMap.set(Number(l.args.roundId), {
                     amount: formatEther(l.args.amount),
                     group: Number(l.args.group)
                 });
             });
 
-            // Second pass: Ensure claimed wins are noted even if stake log failed
-            allLogs.filter(l => l.eventName === 'PayoutClaimed').forEach(l => {
+            userClaimLogs.forEach(l => {
                 const rid = Number(l.args.roundId);
                 if (!discoveryMap.has(rid)) {
+                    // If we only found a claim log (stake log missing from range), we note it
                     discoveryMap.set(rid, {
-                        amount: formatEther(l.args.amount), // Note: amount in claim is payout
-                        group: 0 // Will try to find group in state/outcome
+                        amount: '0', // Will try to find correct amount from state or log
+                        group: 0
                     });
                 }
             });
 
-            // 3. Supplement with Direct Scan of last 100 rounds
-            const allUniqueIds = Array.from(new Set([
-                ...Array.from({ length: 100 }, (_, i) => Number(currentId) - i).filter(id => id > 0),
-                ...Array.from(discoveryMap.keys())
-            ])).sort((a, b) => b - a).slice(0, 100);
+            // 3. Round Scan (Check last 200 rounds + any log-discovered rounds)
+            const roundsToSweep = new Set<number>();
+            // Add last 200 rounds for "No Log" safety
+            for (let i = 0; i < 200; i++) {
+                const rid = currentId - i;
+                if (rid > 0) roundsToSweep.add(rid);
+            }
+            // Add all rounds found in logs
+            discoveryMap.forEach((_, rid) => roundsToSweep.add(rid));
 
-            // Fetch Outcomes + Stakes for all discovered rounds
+            const sortedSweepIds = Array.from(roundsToSweep).sort((a, b) => b - a).slice(0, 150);
+
+            console.log(`[useUserHistory] Sweeping outcomes for ${sortedSweepIds.length} rounds...`);
+
             const contracts: any[] = [];
-            allUniqueIds.forEach(id => {
+            sortedSweepIds.forEach(id => {
                 contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [BigInt(id)] });
                 contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
             });
@@ -112,8 +130,8 @@ export function useUserHistory() {
 
             const finalHistory: HistoryItem[] = [];
 
-            for (let i = 0; i < allUniqueIds.length; i++) {
-                const rId = allUniqueIds[i];
+            for (let i = 0; i < sortedSweepIds.length; i++) {
+                const rId = sortedSweepIds[i];
                 const rRes: any = results[i * 2];
                 const sRes: any = results[i * 2 + 1];
 
@@ -121,34 +139,43 @@ export function useUserHistory() {
                     const r = rRes.result;
                     const logData = discoveryMap.get(rId);
 
-                    let amountStr = logData?.amount;
-                    let group = logData?.group;
+                    let amountStr = logData?.amount || '0';
+                    let group = logData?.group || 0;
 
-                    // Deep fallback for missing logs
+                    // Update from State if current
                     if (sRes?.status === 'success' && sRes.result) {
                         const s = sRes.result;
-                        const amt = Array.isArray(s) ? s[0] : (s as any).amount;
-                        const grp = Array.isArray(s) ? Number(s[1]) : Number((s as any).group);
+                        const stateAmt = Array.isArray(s) ? s[0] : (s as any).amount;
+                        const stateGrp = Array.isArray(s) ? Number(s[1]) : Number((s as any).group);
 
-                        // If we found a stake in state, use it (handles current bets/unclaimed wins)
-                        if (amt > 0n) {
-                            amountStr = formatEther(amt);
-                            group = grp;
-                        }
-                        // If we had a log but group was 0 (from claim log), try to find group in state
-                        else if (group === 0 && grp > 0) {
-                            group = grp;
+                        if (stateAmt > 0n) {
+                            amountStr = formatEther(stateAmt);
+                            group = stateGrp;
+                        } else if (group === 0 && stateGrp > 0) {
+                            group = stateGrp;
                         }
                     }
 
-                    // Special case: If it was a claim, the group might be missing from both logs and state
-                    // In that case, we can assume group was the winningGroup if it's completed
-                    if (amountStr && (group === undefined || group === 0)) {
+                    // Special: If we still don't have amount/group (Claimed win but stake log missing)
+                    // We check if it's a win and use that
+                    if (amountStr === '0' || group === 0) {
                         const winGrp = Number(Array.isArray(r) ? r[8] : (r as any).winningGroup);
-                        if (winGrp > 0) group = winGrp;
+                        const isWinner = winGrp > 0 && winGrp === group;
+                        // If it's completed and we saw a claim log, it's definitely a win
+                        if (userClaimLogs.some(l => Number(l.args.roundId) === rId)) {
+                            group = winGrp;
+                            // Find amount from claim log
+                            const claimLog = userClaimLogs.find(l => Number(l.args.roundId) === rId);
+                            if (claimLog) {
+                                // Contract PayoutClaimed amount is the prize. 
+                                // To show original bet, we'd need more math, but showing 0 is worse than showing nothing.
+                                // We'll leave it as found.
+                            }
+                        }
                     }
 
-                    if (amountStr && group && group > 0) {
+                    // Filter for display: Must have a valid amount and group
+                    if (amountStr !== '0' && group > 0) {
                         finalHistory.push({
                             roundId: rId,
                             amount: amountStr,
@@ -161,7 +188,7 @@ export function useUserHistory() {
                 }
             }
 
-            console.log(`[useUserHistory] Intelligence Sync Complete. Found ${finalHistory.length} items.`);
+            console.log(`[useUserHistory] Sync success. Final visible count: ${finalHistory.length}`);
             setHistory(finalHistory);
 
         } catch (error) {
