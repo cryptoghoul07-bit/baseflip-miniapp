@@ -33,6 +33,7 @@ const ABI = parseAbi([
     'event WinnerDeclared(uint256 indexed roundId, uint8 winningGroup)',
     'function declareWinner(uint256 roundId, uint8 winningGroup) external',
     'function rounds(uint256 roundId) external view returns (uint256 levelId, uint256 poolA, uint256 poolB, uint256 roundStartTime, bool isActive, bool isCompleted, uint8 winningGroup)',
+    'function currentRoundId() external view returns (uint256)',
     'function collectedFees() external view returns (uint256)',
     'function withdrawFees() external',
 ]);
@@ -220,30 +221,27 @@ async function startMonitoring() {
     console.log('Press Ctrl+C to stop\n');
 
     // Polling loop
+    // Polling loop
     const pollInterval = setInterval(async () => {
         try {
-            let currentRoundId = processingStartRound;
-            let consecutiveFailures = 0;
+            // Smart Polling: Get the actual current round ID from contract
+            const currentRoundId = await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: ABI,
+                functionName: 'currentRoundId',
+            });
 
-            // Scan rounds starting from the last known incomplete round
-            while (consecutiveFailures < 3) {
-                const result = await checkRound(currentRoundId);
+            const roundId = Number(currentRoundId);
+            // console.log(`   🔍 Current Round on Chain: ${roundId}`);
 
-                if (result.exists) {
-                    consecutiveFailures = 0;
+            // Check current round (might be active)
+            await checkRound(roundId);
 
-                    // If this round is completed and it's the one we started closely from,
-                    // we can advance our start pointer to avoid re-checking it forever.
-                    if (result.isCompleted && currentRoundId === processingStartRound) {
-                        processingStartRound++;
-                    }
-
-                    currentRoundId++;
-                } else {
-                    consecutiveFailures++;
-                    currentRoundId++;
-                }
+            // Check previous round (might be just finished but not winner declared if logic lagging)
+            if (roundId > 1) {
+                await checkRound(roundId - 1);
             }
+
         } catch (error) {
             console.error('Error during polling:', error.message);
         }
