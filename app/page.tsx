@@ -46,6 +46,8 @@ function PlatformStatsBanner() {
       borderRadius: '20px',
       margin: '0 auto 20px',
       width: 'fit-content',
+      maxWidth: '90%',
+      flexWrap: 'wrap',
       border: '1px solid rgba(255, 255, 255, 0.05)'
     }}>
       <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Total Volume:</span>
@@ -163,7 +165,7 @@ export default function Home() {
           <button onClick={() => window.location.href = '/leaderboard'} className={styles.leaderboardLink}>
             👑 Leaderboard
           </button>
-          <button onClick={() => setShowHistory(true)} className={styles.leaderboardLink} style={{ marginLeft: '10px' }}>
+          <button onClick={() => setShowHistory(true)} className={styles.leaderboardLink}>
             📜 My Bets
           </button>
         </div>
