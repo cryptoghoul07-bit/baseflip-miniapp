@@ -40,7 +40,8 @@ export function RootProvider({ children }: { children: ReactNode }) {
           chain={baseSepolia}
           config={{
             appearance: {
-              mode: "auto",
+              mode: "dark",
+              theme: "midnight", // Use 'midnight' or 'dark' base
             },
             wallet: {
               display: "modal",
