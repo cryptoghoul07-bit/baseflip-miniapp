@@ -280,22 +280,45 @@
 /* Responsive */
 @media (max-width: 768px) {
   .title {
-    font-size: 2rem;
+    font-size: 1.8rem;
+    letter-spacing: 1px;
   }
 
   .headerTop {
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+  }
+
+  .logo {
+    width: 45px;
+    height: 45px;
   }
 
   .gameContent {
     gap: 20px;
   }
 
-
   .leaderboardLink {
-    padding: 10px 20px;
-    font-size: 0.85rem;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .walletButton {
+    width: 100%;
+  }
+
+  .connectButton {
+    width: 100% !important;
+    font-size: 0.85rem !important;
+    padding: 10px 16px !important;
+  }
+
+  .walletDropdown {
+    min-width: calc(100vw - 40px) !important;
+    left: 0 !important;
+    right: 0 !important;
   }
 }
 

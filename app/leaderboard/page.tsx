@@ -30,7 +30,7 @@ export default function LeaderboardPage() {
 
                 <div className={styles.walletButton}>
                     <Wallet>
-                        <ConnectWallet>
+                        <ConnectWallet className={styles.connectButton}>
                             <Avatar className="h-6 w-6" />
                             <Name />
                         </ConnectWallet>
