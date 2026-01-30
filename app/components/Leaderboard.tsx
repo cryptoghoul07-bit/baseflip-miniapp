@@ -11,19 +11,15 @@ interface LeaderboardEntry {
 interface LeaderboardProps {
     leaderboard: LeaderboardEntry[];
     currentUserAddress?: string;
+    currentUserStats?: { points: number, rank: number | string } | null;
 }
 
-export default function Leaderboard({ leaderboard, currentUserAddress }: LeaderboardProps) {
+export default function Leaderboard({ leaderboard, currentUserAddress, currentUserStats }: LeaderboardProps) {
     const [currentPage, setCurrentPage] = React.useState(0);
     const ITEMS_PER_PAGE = 10;
-    const TOTAL_LIST_LIMIT = 50;
+    const TOTAL_LIST_LIMIT = 100; // Increased to 100 as per common request
 
-    // Find current user's entry in the full list
-    const userEntry = currentUserAddress
-        ? leaderboard.find(e => e.address.toLowerCase() === currentUserAddress.toLowerCase())
-        : null;
-
-    // Filter to top 50 and then paginate
+    // Filter to limit and then paginate
     const baseList = leaderboard.slice(0, TOTAL_LIST_LIMIT);
     const totalPages = Math.ceil(baseList.length / ITEMS_PER_PAGE);
 
@@ -40,7 +36,7 @@ export default function Leaderboard({ leaderboard, currentUserAddress }: Leaderb
         if (rank === 1) return '🥇';
         if (rank === 2) return '🥈';
         if (rank === 3) return '🥉';
-        return rank;
+        return <span className={styles.rankNumber}>{rank}</span>;
     };
 
     const nextPage = () => {
@@ -126,15 +122,15 @@ export default function Leaderboard({ leaderboard, currentUserAddress }: Leaderb
                     {currentUserAddress && (
                         <div className={styles.userStatsBar}>
                             <div className={styles.userStatsContent}>
-                                {userEntry ? (
+                                {currentUserStats ? (
                                     <>
-                                        <div className={styles.rank}>{userEntry.rank}</div>
+                                        <div className={styles.rank}>{currentUserStats.rank}</div>
                                         <div className={styles.address}>
-                                            {shortenAddress(userEntry.address)}
+                                            {shortenAddress(currentUserAddress)}
                                             <span className={styles.youBadge}>You</span>
                                         </div>
                                         <div className={styles.points}>
-                                            {userEntry.points} pts
+                                            {currentUserStats.points} pts
                                         </div>
                                     </>
                                 ) : (
@@ -145,7 +141,7 @@ export default function Leaderboard({ leaderboard, currentUserAddress }: Leaderb
                                             <span className={styles.youBadge}>You</span>
                                         </div>
                                         <div className={styles.points} style={{ fontSize: '0.9rem', opacity: 0.8 }}>
-                                            Unranked (Play to join!)
+                                            Calculating...
                                         </div>
                                     </>
                                 )}

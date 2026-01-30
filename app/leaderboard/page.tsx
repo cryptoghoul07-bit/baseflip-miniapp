@@ -19,7 +19,7 @@ import {
 
 export default function LeaderboardPage() {
     const { address } = useAccount();
-    const { leaderboard, isLoading } = useLeaderboard();
+    const { leaderboard, currentUserStats, isLoading } = useLeaderboard();
 
     return (
         <div className={styles.container}>
@@ -46,13 +46,17 @@ export default function LeaderboardPage() {
                 </div>
             </div>
 
-            {isLoading ? (
+            {isLoading && leaderboard.length === 0 ? (
                 <div className={styles.loading}>
                     <div className={styles.spinner} />
                     <p>Loading champions...</p>
                 </div>
             ) : (
-                <Leaderboard leaderboard={leaderboard} currentUserAddress={address} />
+                <Leaderboard
+                    leaderboard={leaderboard}
+                    currentUserAddress={address}
+                    currentUserStats={currentUserStats}
+                />
             )}
         </div>
     );
