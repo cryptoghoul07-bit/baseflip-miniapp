@@ -40,10 +40,9 @@ export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
 
 function HistoryRow({ item }: { item: HistoryItem }) {
     const isPending = !item.isCompleted;
-    const isWon = item.isCompleted && item.winningGroup === item.group;
 
     return (
-        <div className={`${styles.row} ${isPending ? styles.pending : isWon ? styles.won : styles.lost}`}>
+        <div className={`${styles.row} ${isPending ? styles.pending : item.isWinner ? styles.won : styles.lost}`}>
             <div className={styles.rowLeft}>
                 <span className={styles.roundId}>#{item.roundId}</span>
                 <span className={styles.timestamp}>

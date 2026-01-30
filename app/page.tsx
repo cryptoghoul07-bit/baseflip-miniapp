@@ -88,6 +88,7 @@ export default function Home() {
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
+  const { history, recordRoundResult } = useUserHistory();
   const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('lastAnimatedRoundId');
@@ -105,16 +106,60 @@ export default function Home() {
     if (lastWinner && lastWinner.group > 0) {
       // Check if we already animated THIS round ID
       if (lastAnimatedId !== lastWinner.id) {
-        console.log("Triggering Flip Animation! Winner of Round:", lastWinner.id, "Group:", lastWinner.group);
+        console.log("Triggering Flip Animation & Record! Round:", lastWinner.id);
         setIsFlipping(true);
         setFlipWinner(lastWinner.group);
         setLastAnimatedId(lastWinner.id); // Mark as animated in state
 
         // Persist to localStorage so it doesn't replay on refresh
         localStorage.setItem('lastAnimatedRoundId', lastWinner.id.toString());
+
+        // PERSISTENCE: Record result to local "Rounds Log"
+        if (prevUserStake && prevRound) {
+          const s = prevUserStake as any;
+          const r = prevRound as any;
+          const isSArr = Array.isArray(s);
+          const isRArr = Array.isArray(r);
+
+          const group = Number(isSArr ? s[1] : s.group);
+          const stakeAmtBn = (isSArr ? s[0] : s.amount) as bigint;
+
+          if (group > 0 && stakeAmtBn > 0n) {
+            const poolA = (isRArr ? r[1] : r.poolA) as bigint;
+            const poolB = (isRArr ? r[2] : r.poolB) as bigint;
+            const winningGroup = Number(isRArr ? r[8] : r.winningGroup);
+            const createdAt = Number(isRArr ? r[4] : r.createdAt);
+            const isCancelled = isRArr ? r[7] : r.isCancelled;
+
+            const isWinner = !isCancelled && winningGroup === group;
+            let displayAmt = formatEther(stakeAmtBn);
+
+            if (isWinner) {
+              const winningPool = winningGroup === 1 ? poolA : poolB;
+              const losingPool = winningGroup === 1 ? poolB : poolA;
+              if (winningPool > 0n) {
+                const payoutPool = (losingPool * 99n) / 100n;
+                const share = (stakeAmtBn * payoutPool) / winningPool;
+                displayAmt = formatEther(stakeAmtBn + share);
+              }
+            }
+
+            recordRoundResult({
+              roundId: Number(lastWinner.id),
+              amount: displayAmt,
+              stakeAmount: formatEther(stakeAmtBn),
+              group,
+              winningGroup,
+              isCompleted: true,
+              isWinner,
+              timestamp: createdAt || Math.floor(Date.now() / 1000),
+              isClaimed: false
+            });
+          }
+        }
       }
     }
-  }, [lastWinner, lastAnimatedId]);
+  }, [lastWinner, lastAnimatedId, prevUserStake, prevRound, recordRoundResult]);
 
   const handleFlipComplete = () => {
     setIsFlipping(false);

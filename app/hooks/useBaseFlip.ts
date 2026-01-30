@@ -295,6 +295,8 @@ export function useBaseFlip() {
         unclaimedRound,
         lastWinner,
         reclaimStake,
-        isReclaiming
+        isReclaiming,
+        prevRound,
+        prevUserStake
     };
 }
