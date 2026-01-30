@@ -430,25 +430,23 @@ contract BaseFlip is Ownable, ReentrancyGuard {
     function _calculateRoundPoints(uint256 _stakeAmount, bool _isWinner, uint256 _levelId) internal view returns (uint256) {
         Level storage level = levels[_levelId];
         
-        // Base participation points
-        uint256 basePoints = 10;
+        // Total points for the round based on LEVEL target size
+        // Example: Level 1 (0.1 ETH total) -> 100 points "Pizza" pool
+        // Formula: targetPoolSize * 1000 / 1 ether
+        uint256 totalRoundPoints = (level.targetPoolSize * 1000) / 1 ether;
         
-        // Stake bonus (0-5 points, linear scale based on stake amount)
-        // Formula: min(5, (stakeAmount / maxStake) * 5)
-        uint256 stakeBonus = (_stakeAmount * 5) / level.maxStake;
-        if (stakeBonus > 5) {
-            stakeBonus = 5;
-        }
-        
-        // Total round points before multiplier
-        uint256 roundPoints = basePoints + stakeBonus;
-        
-        // Apply outcome multiplier (2x for winners, 1x for losers)
+        // Calculate user's share of the "Fair Point Pool"
+        // Base Share: (Your Stake / Total Target Pool) * Total Points
+        // We multiply by 10 to handle precision before dividing
+        uint256 userShare = (_stakeAmount * totalRoundPoints) / (level.targetPoolSize * 2);
+
         if (_isWinner) {
-            roundPoints = roundPoints * 2;
+            // Winners get the main share (80% of round value)
+            return (userShare * 16) / 10; // Share * 1.6 (which is 80% of the total 2-side pool)
+        } else {
+            // Losers get the fair share (20% of round value)
+            return (userShare * 4) / 10;  // Share * 0.4 (which is 20% of the total 2-side pool)
         }
-        
-        return roundPoints;
     }
     
     /**

@@ -152,34 +152,41 @@ export default function Leaderboard({ leaderboard, currentUserAddress, currentUs
             )}
 
             <div className={styles.rulesSection}>
-                <h3>📋 How Points Work</h3>
+                <h3>📋 Fair Play & Point System</h3>
                 <div className={styles.rulesList}>
                     <div className={styles.ruleItem}>
-                        <span className={styles.ruleIcon}>🎯</span>
+                        <span className={styles.ruleIcon}>🍕</span>
                         <div className={styles.ruleContent}>
-                            <strong>Participation:</strong>
-                            <p>Earn 10 base points for joining any completed round, win or lose.</p>
-                        </div>
-                    </div>
-                    <div className={styles.ruleItem}>
-                        <span className={styles.ruleIcon}>💎</span>
-                        <div className={styles.ruleContent}>
-                            <strong>Stake Bonus:</strong>
-                            <p>Earn 0-5 bonus points based on your stake amount (capped to prevent whale dominance).</p>
+                            <strong>The "Point Pool" Model:</strong>
+                            <p>Every round has a fixed pool of points based on the ETH level. For Level 1 (0.1 ETH), the pool is 100 points.</p>
                         </div>
                     </div>
                     <div className={styles.ruleItem}>
                         <span className={styles.ruleIcon}>🏆</span>
                         <div className={styles.ruleContent}>
-                            <strong>Outcome Multiplier:</strong>
-                            <p>Winners get 2x total points. Losers keep their base + stake bonus points.</p>
+                            <strong>Winners (80%):</strong>
+                            <p>The winning side receives the lion's share (80%) of the round's points, distributed pro-rata to their stake.</p>
+                        </div>
+                    </div>
+                    <div className={styles.ruleItem}>
+                        <span className={styles.ruleIcon}>🛡️</span>
+                        <div className={styles.ruleContent}>
+                            <strong>Losers (20%):</strong>
+                            <p>Even if you lose, you earn 20% of the points as a fair progress reward for participating.</p>
+                        </div>
+                    </div>
+                    <div className={styles.ruleItem}>
+                        <span className={styles.ruleIcon}>🚫</span>
+                        <div className={styles.ruleContent}>
+                            <strong>Anti-Farming Protection:</strong>
+                            <p>Because every round takes a 1% fee, "farming" against yourself is mathematically expensive and net-negative. Honest players earn rank for free; farmers pay a "Point Tax" in real ETH.</p>
                         </div>
                     </div>
                     <div className={styles.ruleItem}>
                         <span className={styles.ruleIcon}>🪂</span>
                         <div className={styles.ruleContent}>
                             <strong>Airdrop Distribution:</strong>
-                            <p>Top players receive Base-ETH airdrops proportional to their total points.</p>
+                            <p>Top players receive Base-ETH airdrops proportional to their total points at the end of each season.</p>
                         </div>
                     </div>
                 </div>
