@@ -171,24 +171,6 @@
     }
 }
 
-.footer {
-    padding: 15px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    text-align: center;
-}
-
-.refreshButton {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: white;
-    padding: 8px 16px;
-    border-radius: 8px;
-    transition: all 0.2s;
-}
-
-.refreshButton:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
 
 @keyframes slideUp {
     from {

@@ -33,12 +33,6 @@ export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
                         </div>
                     )}
                 </div>
-
-                <div className={styles.footer}>
-                    <button className={styles.refreshButton} onClick={refetchHistory}>
-                        🔄 Refresh
-                    </button>
-                </div>
             </div>
         </div>
     );
