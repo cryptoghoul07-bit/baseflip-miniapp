@@ -88,14 +88,17 @@ export default function Home() {
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
 
-  // Track the last round we animated so we don't re-animate on refresh
-  const lastAnimatedRoundRef = useState<string | null>(null);
-  // Actually, useRef is better for "instance variable" that doesn't trigger re-renders, 
-  // but if we want to ensure persistent logic across renders, let's use a state that we only update when we animate.
-
-  // Actually, let's use a simple heuristic:
-  // If we receive data saying round is completed, AND we haven't seen this specific round ID complete before in this session.
-  const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(null);
+  const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('lastAnimatedRoundId');
+      try {
+        return saved ? BigInt(saved) : null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
 
   useEffect(() => {
     // Watch for updates to lastWinner (which represents the just-completed round)
@@ -105,7 +108,10 @@ export default function Home() {
         console.log("Triggering Flip Animation! Winner of Round:", lastWinner.id, "Group:", lastWinner.group);
         setIsFlipping(true);
         setFlipWinner(lastWinner.group);
-        setLastAnimatedId(lastWinner.id); // Mark as animated
+        setLastAnimatedId(lastWinner.id); // Mark as animated in state
+
+        // Persist to localStorage so it doesn't replay on refresh
+        localStorage.setItem('lastAnimatedRoundId', lastWinner.id.toString());
       }
     }
   }, [lastWinner, lastAnimatedId]);
