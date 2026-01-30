@@ -20,7 +20,7 @@ const config = createConfig({
   ],
   transports: {
     [baseSepolia.id]: http("https://sepolia.base.org", {
-      batch: { multicall: true },
+      batch: true,
       timeout: 10000,
     }),
   },
@@ -54,7 +54,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
             },
           }}
           miniKit={{
-            enabled: false,
+            enabled: true,
             autoConnect: true,
             notificationProxyUrl: undefined,
           }}
