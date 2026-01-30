@@ -14,13 +14,24 @@ interface LeaderboardProps {
 }
 
 export default function Leaderboard({ leaderboard, currentUserAddress }: LeaderboardProps) {
-    // Find current user's entry
+    const [currentPage, setCurrentPage] = React.useState(0);
+    const ITEMS_PER_PAGE = 10;
+    const TOTAL_LIST_LIMIT = 50;
+
+    // Find current user's entry in the full list
     const userEntry = currentUserAddress
         ? leaderboard.find(e => e.address.toLowerCase() === currentUserAddress.toLowerCase())
         : null;
 
-    // We only show top 50 in the list to avoid clutter
-    const displayList = leaderboard.slice(0, 50);
+    // Filter to top 50 and then paginate
+    const baseList = leaderboard.slice(0, TOTAL_LIST_LIMIT);
+    const totalPages = Math.ceil(baseList.length / ITEMS_PER_PAGE);
+
+    const displayList = baseList.slice(
+        currentPage * ITEMS_PER_PAGE,
+        (currentPage + 1) * ITEMS_PER_PAGE
+    );
+
     const shortenAddress = (addr: string) => {
         return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
     };
@@ -30,6 +41,18 @@ export default function Leaderboard({ leaderboard, currentUserAddress }: Leaderb
         if (rank === 2) return '🥈';
         if (rank === 3) return '🥉';
         return rank;
+    };
+
+    const nextPage = () => {
+        if (currentPage < totalPages - 1) {
+            setCurrentPage(prev => prev + 1);
+        }
+    };
+
+    const prevPage = () => {
+        if (currentPage > 0) {
+            setCurrentPage(prev => prev - 1);
+        }
     };
 
     return (
@@ -75,6 +98,29 @@ export default function Leaderboard({ leaderboard, currentUserAddress }: Leaderb
                             );
                         })}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                        <div className={styles.pagination}>
+                            <button
+                                onClick={prevPage}
+                                disabled={currentPage === 0}
+                                className={styles.pageButton}
+                            >
+                                ← Previous
+                            </button>
+                            <span className={styles.pageIndicator}>
+                                Page {currentPage + 1} of {totalPages}
+                            </span>
+                            <button
+                                onClick={nextPage}
+                                disabled={currentPage === totalPages - 1}
+                                className={styles.pageButton}
+                            >
+                                Next →
+                            </button>
+                        </div>
+                    )}
 
                     {/* Sticky User Stats Bar */}
                     {currentUserAddress && (
