@@ -46,6 +46,18 @@
   box-sizing: border-box;
   padding: 0;
   margin: 0;
+  /* Nuclear Fix for Mobile/MetaMask highlight glitches */
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
+  -webkit-tap-highlight-color: transparent !important;
+  -webkit-touch-callout: none !important;
+  outline: none !important;
+}
+
+*:focus,
+*:active,
+*:hover {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
 html,
