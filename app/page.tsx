@@ -15,7 +15,9 @@ import {
   Identity,
 } from "@coinbase/onchainkit/identity";
 import { useAccount } from "wagmi";
+import { formatEther } from "viem";
 import { useBaseFlip } from "./hooks/useBaseFlip";
+import { useUserHistory } from "./hooks/useUserHistory";
 import LevelSelector from "./components/LevelSelector";
 import PoolDisplay from "./components/PoolDisplay";
 import StakeInput from "./components/StakeInput";
@@ -79,7 +81,9 @@ export default function Home() {
     isLoading: isBaseFlipLoading,
     error: baseFlipError,
     reclaimStake,
-    isReclaiming
+    isReclaiming,
+    prevRound,
+    prevUserStake
   } = useBaseFlip();
 
   const { claimableRounds, claimRound, isClaiming: isClaimingLegacy, scanForWinnings } = useAllUnclaimedWinnings();
