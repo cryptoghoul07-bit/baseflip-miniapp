@@ -139,10 +139,18 @@
 
 .statusLost {
     color: #FF4444;
+    font-weight: 500;
 }
 
 .statusPending {
     color: #FFDD00;
+}
+
+.stakeBasis {
+    font-size: 0.65rem;
+    color: #94A3B8;
+    opacity: 0.7;
+    margin-top: 2px;
 }
 
 @media (max-width: 600px) {

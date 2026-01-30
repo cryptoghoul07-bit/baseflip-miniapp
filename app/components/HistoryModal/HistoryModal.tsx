@@ -53,18 +53,19 @@ function HistoryRow({ item }: { item: HistoryItem }) {
 
             <div className={styles.rowCenter}>
                 <span className={styles.amount}>
-                    {item.isWinner ? '🏆 Won ' : '💰 Staked '}
+                    {isPending ? '💰 Staked ' : item.isWinner ? '🏆 Won ' : '💀 Lost '}
                     {item.amount.includes('+') ? item.amount : Number(item.amount).toFixed(4)} ETH
                 </span>
                 <span className={item.group === 1 ? styles.groupA : styles.groupB}>
                     on {item.group === 1 ? 'Pool A (Blue)' : 'Pool B (Red)'}
                 </span>
+                {item.isWinner && <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>from {Number(item.stakeAmount).toFixed(4)} bet</span>}
             </div>
 
             <div className={styles.rowRight}>
                 {isPending ? (
                     <span className={styles.statusPending}>⏳ Pending</span>
-                ) : isWon ? (
+                ) : item.isWinner ? (
                     <span className={styles.statusWon}>🏆 WON</span>
                 ) : (
                     <span className={styles.statusLost}>💀 Lost</span>
