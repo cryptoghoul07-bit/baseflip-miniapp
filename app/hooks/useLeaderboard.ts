@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createPublicClient, http, parseAbiItem, formatEther } from 'viem';
+import { createPublicClient, http, parseAbiItem } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { useAccount } from 'wagmi';
 
@@ -31,67 +31,88 @@ export function useLeaderboard() {
 
             console.log(`[useLeaderboard] Starting Virtual Recalculation (Anti-Farming)...`);
 
-            // 1. Fetch all relevant events to reconstruct history
+            // Use a safe starting block to avoid RPC timeouts (Base Sepolia deployment era)
+            const fromBlock = 16000000n;
+
+            // 1. Fetch all relevant events (Corrected signatures)
             const [stakeLogs, winnerLogs, startedLogs] = await Promise.all([
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: parseAbiItem('event StakePlaced(uint256 indexed roundId, address indexed user, uint8 group, uint256 amount)'),
-                    fromBlock: 0n
-                }).catch(() => []),
+                    fromBlock: fromBlock
+                }).catch(e => { console.error("Stake Logs Error:", e); return []; }),
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: parseAbiItem('event WinnerDeclared(uint256 indexed roundId, uint8 winningGroup)'),
-                    fromBlock: 0n
-                }).catch(() => []),
+                    fromBlock: fromBlock
+                }).catch(e => { console.error("Winner Logs Error:", e); return []; }),
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
-                    event: parseAbiItem('event RoundStarted(uint256 indexed roundId, uint256 poolA, uint256 poolB)'),
-                    fromBlock: 0n
-                }).catch(() => [])
+                    event: parseAbiItem('event RoundStarted(uint256 indexed roundId, uint256 poolA, uint256 poolB, uint256 targetSize)'),
+                    fromBlock: fromBlock
+                }).catch(e => { console.error("Started Logs Error:", e); return []; })
             ]);
+
+            console.log(`[useLeaderboard] Logs found: Stakes=${stakeLogs.length}, Winners=${winnerLogs.length}, Started=${startedLogs.length}`);
 
             // 2. Map winners and pool sizes
             const roundWinners = new Map<number, number>();
-            winnerLogs.forEach((l: any) => roundWinners.set(Number(l.args.roundId), Number(l.args.winningGroup)));
+            winnerLogs.forEach((l: any) => {
+                if (l.args && l.args.roundId) {
+                    roundWinners.set(Number(l.args.roundId), Number(l.args.winningGroup));
+                }
+            });
 
             const roundPools = new Map<number, { a: bigint, b: bigint }>();
-            startedLogs.forEach((l: any) => roundPools.set(Number(l.args.roundId), { a: l.args.poolA, b: l.args.poolB }));
+            startedLogs.forEach((l: any) => {
+                if (l.args && l.args.roundId) {
+                    roundPools.set(Number(l.args.roundId), { a: l.args.poolA, b: l.args.poolB });
+                }
+            });
 
-            // 3. Process every user's participation and apply Fair Point Model (80/20)
+            // 3. Process participation and apply 80/20 Point Model
             const pointsMap = new Map<string, number>();
 
             stakeLogs.forEach((log: any) => {
+                if (!log.args) return;
+
                 const rid = Number(log.args.roundId);
                 const winner = roundWinners.get(rid);
                 const pools = roundPools.get(rid);
-                const user = log.args.user.toLowerCase();
+                const user = log.args.user?.toLowerCase();
                 const stakeAmt = log.args.amount as bigint;
                 const group = Number(log.args.group);
 
-                // For Points, assume Level 1 targets (0.1 ETH) if pools missing, or use actual pools
-                // We use the same formula as the new contract update
-                if (winner && pools) {
-                    const winningPool = winner === 1 ? pools.a : pools.b;
-                    const losingPool = winner === 1 ? pools.b : pools.a;
-                    const isWinner = group === winner;
+                if (!user) return;
 
-                    // Fixed Pizza Size based on total liquidity: (PoolA + PoolB) normalized to 100pts per 0.1 ETH
-                    const totalLiquidity = pools.a + pools.b;
-                    const pizzaPoints = Number((totalLiquidity * 1000n) / 2n / 1000000000000000000n) * 100; // 100 pts per 0.1 ETH target
+                // Points are ONLY awarded for COMPLETED rounds (winner declared)
+                if (winner !== undefined && pools) {
+                    const isWinner = (group === winner);
 
-                    // Normalized to 100 points per 0.1 ETH total round volume
-                    const pointsPool = 100; // Let's simplify to 100 points per round level 1 for standard display
+                    // Total available points for level: 100 points per 0.1 ETH total pool
+                    // targetPoolSize is usually pools.a + pools.b or fixed by level
+                    const totalRoundVolume = pools.a + pools.b;
 
-                    // Calculate Share
-                    const roundTarget = 100000000000000000n; // 0.1 ETH
-                    const userShare = Number((stakeAmt * 100n) / roundTarget); // % of a single pool
+                    // 100 points per 0.1 ETH round volume (normalized)
+                    const roundBasePoints = Number((totalRoundVolume * 100n) / 100000000000000000n);
+
+                    // User share of their pool
+                    const sidePool = group === 1 ? pools.a : pools.b;
+                    if (sidePool === 0n) return;
 
                     let awarded = 0;
                     if (isWinner) {
-                        awarded = Math.round(userShare * 1.6); // 80% of total 2-side pool
+                        // Winner gets 80% proportional to their share of the winning side
+                        const winnersTotalPoints = roundBasePoints * 0.8;
+                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * winnersTotalPoints);
                     } else {
-                        awarded = Math.round(userShare * 0.4); // 20% of total 2-side pool
+                        // Loser gets 20% proportional to their share of the losing side
+                        const losersTotalPoints = roundBasePoints * 0.2;
+                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * losersTotalPoints);
                     }
+
+                    // Add a tiny minimum if they participated at all in a completed round
+                    awarded = Math.max(awarded, 1);
 
                     pointsMap.set(user, (pointsMap.get(user) || 0) + awarded);
                 }
@@ -102,13 +123,14 @@ export function useLeaderboard() {
                 .map(([addr, pts]) => ({
                     address: addr,
                     points: pts,
-                    rank: 0 // Settled below
+                    rank: 0
                 }))
                 .sort((a, b) => b.points - a.points)
                 .slice(0, 100);
 
             entries.forEach((e, i) => e.rank = i + 1);
 
+            console.log(`[useLeaderboard] Final Leaderboard Size: ${entries.length}`);
             setLeaderboard(entries);
 
             // 5. Calculate current user stats
@@ -136,7 +158,7 @@ export function useLeaderboard() {
 
     useEffect(() => {
         fetchLeaderboard();
-        const interval = setInterval(fetchLeaderboard, 45000); // Indexing takes longer, poll slower
+        const interval = setInterval(fetchLeaderboard, 60000);
         return () => clearInterval(interval);
     }, [fetchLeaderboard]);
 
