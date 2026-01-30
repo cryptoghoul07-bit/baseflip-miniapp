@@ -53,6 +53,7 @@ function HistoryRow({ item }: { item: HistoryItem }) {
 
             <div className={styles.rowCenter}>
                 <span className={styles.amount}>
+                    {isWon && item.isClaimed ? '🏆 Won ' : '💰 Staked '}
                     {item.amount.includes('+') ? item.amount : Number(item.amount).toFixed(3)} ETH
                 </span>
                 <span className={item.group === 1 ? styles.groupA : styles.groupB}>

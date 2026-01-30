@@ -108,26 +108,22 @@ export function useUserHistory() {
                         const stakeLog = logMap.get(`StakePlaced_${rId}`);
                         const claimLog = logMap.get(`PayoutClaimed_${rId}`);
 
-                        // Priority for displaying amount:
-                        // 1. Current State Amount (if bet is pending/unclaimed)
-                        // 2. Historical Stake Log (the exact bet amount)
-                        // 3. Fallback: Reconstruct from Claim Log (Total Prize / 2 as a rough guess if all else fails)
-                        // 4. Fallback: 0.001 (Min bet) if we know they played but RPC failed us.
-
-                        let displayAmount = '0.000';
+                        let stakeAmt = "0.001+";
                         if (stateAmt > 0n) {
-                            displayAmount = formatEther(stateAmt);
+                            stakeAmt = formatEther(stateAmt);
                         } else if (stakeLog?.amount) {
-                            displayAmount = formatEther(stakeLog.amount);
-                        } else if (claimLog?.amount) {
-                            // If they claimed, their original stake was roughly half the prize (in 1v1 levels)
-                            // But let's show the prize if we have to, it's better than 0. 
-                            // Actually, let's label it correctly or just use it.
-                            displayAmount = formatEther(claimLog.amount);
-                        } else {
-                            // Last resort: If we're here, we know they played (stateGrp > 0) 
-                            // but the RPC is hiding the logs. Show a placeholder or min-bet.
-                            displayAmount = "0.001+";
+                            stakeAmt = formatEther(stakeLog.amount);
+                        }
+
+                        let payoutAmt = claimLog ? formatEther(claimLog.amount) : undefined;
+                        let isClaimed = stateAmt === 0n && roundCompleted && stateGrp === roundWinningGroup;
+
+                        // The primary 'amount' to display:
+                        // If it's a win and we have a payout log, show the PAYOUT.
+                        // Otherwise (loss, pending, or unclaimed win) show the STAKE.
+                        let displayAmount = stakeAmt;
+                        if (isClaimed && payoutAmt) {
+                            displayAmount = payoutAmt;
                         }
 
                         finalHistory.push({
@@ -137,8 +133,8 @@ export function useUserHistory() {
                             winningGroup: roundWinningGroup,
                             isCompleted: roundCompleted,
                             timestamp: roundTimestamp,
-                            payout: claimLog ? formatEther(claimLog.amount) : undefined,
-                            isClaimed: stateAmt === 0n && roundCompleted && stateGrp === roundWinningGroup
+                            payout: payoutAmt,
+                            isClaimed: isClaimed
                         });
                     }
                 }
