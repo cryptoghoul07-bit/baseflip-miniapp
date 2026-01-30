@@ -7,13 +7,15 @@ const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '
 
 export interface HistoryItem {
     roundId: number;
-    amount: string;
+    amount: string; // The primary amount to display (Stake for Pending/Loss, Payout for Win)
+    stakeAmount: string; // The original stake (always kept for reference)
     group: number; // 1 = A, 2 = B
     winningGroup: number; // 0 if pending
     isCompleted: boolean;
     timestamp: number;
     payout?: string;
     isClaimed?: boolean;
+    isWinner: boolean;
 }
 
 export function useUserHistory() {
@@ -26,7 +28,7 @@ export function useUserHistory() {
         if (!address || !publicClient || !CONTRACT_ADDRESS) return;
 
         setIsLoading(true);
-        console.log(`[useUserHistory] Deep Recon for: ${address}`);
+        console.log(`[useUserHistory] Syncing history for: ${address}`);
 
         try {
             // 1. Get current round ID
@@ -37,54 +39,39 @@ export function useUserHistory() {
             }) as bigint;
             const currentId = Number(currentIdBn);
 
-            // 2. State Sweep (Bulletproof discovery of groups)
-            const roundsToScan = Array.from({ length: Math.min(currentId, 250) }, (_, i) => currentId - i).filter(id => id > 0);
+            // 2. Scan last 50 rounds for activity
+            const roundsToScan = Array.from({ length: Math.min(currentId, 50) }, (_, i) => currentId - i).filter(id => id > 0);
             const contracts: any[] = [];
             roundsToScan.forEach(id => {
                 contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [BigInt(id)] });
                 contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
             });
 
-            // 3. Wide Block Range Discovery (10 Million Blocks)
-            const latestBlock = await publicClient.getBlockNumber();
+            // 3. Fetch logs for precise amounts
             const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
             const claimEvent = BaseFlipABI.find(x => x.name === 'PayoutClaimed');
 
-            const logPromises = [];
-            const CHUNK_SIZE = 1000000n;
-            for (let i = 0n; i < 10n; i++) { // 10 million block lookback
-                const to = latestBlock - (i * CHUNK_SIZE);
-                const from = to - CHUNK_SIZE > 0n ? to - CHUNK_SIZE : 0n;
-                if (to <= 0n) break;
-
-                logPromises.push(publicClient.getLogs({
+            const [multicallResults, stakeLogs, claimLogs] = await Promise.all([
+                publicClient.multicall({ contracts: contracts as any, allowFailure: true }),
+                publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: stakeEvent as any,
                     args: { user: address },
-                    fromBlock: from,
-                    toBlock: to
-                }).catch(() => []));
-
-                logPromises.push(publicClient.getLogs({
+                    fromBlock: 0n, // Search all history
+                    toBlock: 'latest'
+                }).catch(() => []),
+                publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: claimEvent as any,
                     args: { user: address },
-                    fromBlock: from,
-                    toBlock: to
-                }).catch(() => []));
-            }
-
-            const [multicallResults, ...logChunks] = await Promise.all([
-                publicClient.multicall({ contracts: contracts as any, allowFailure: true }),
-                ...logPromises
+                    fromBlock: 0n,
+                    toBlock: 'latest'
+                }).catch(() => [])
             ]);
 
-            const allLogs = logChunks.flat() as any[];
             const logMap = new Map<string, any>();
-            allLogs.forEach(log => {
-                const key = `${log.eventName}_${log.args.roundId}`;
-                logMap.set(key, log.args);
-            });
+            (stakeLogs as any[]).forEach(log => logMap.set(`StakePlaced_${log.args.roundId}`, log.args));
+            (claimLogs as any[]).forEach(log => logMap.set(`PayoutClaimed_${log.args.roundId}`, log.args));
 
             const finalHistory: HistoryItem[] = [];
 
@@ -93,55 +80,75 @@ export function useUserHistory() {
                 const rRes: any = multicallResults[i * 2];
                 const sRes: any = multicallResults[i * 2 + 1];
 
-                if (rRes?.status === 'success' && rRes.result) {
+                if (rRes?.status === 'success' && rRes.result && sRes?.status === 'success') {
                     const r = rRes.result;
-                    const s = sRes?.status === 'success' ? sRes.result : null;
+                    const s = sRes.result;
 
-                    const roundCompleted = Array.isArray(r) ? r[6] : (r as any).isCompleted;
-                    const roundWinningGroup = Number(Array.isArray(r) ? r[8] : (r as any).winningGroup);
-                    const roundTimestamp = Number(Array.isArray(r) ? r[4] : (r as any).createdAt);
+                    const isArrayR = Array.isArray(r);
+                    const isArrayS = Array.isArray(s);
 
-                    const stateAmt = s ? (Array.isArray(s) ? s[0] : (s as any).amount) : 0n;
-                    const stateGrp = s ? (Array.isArray(s) ? Number(s[1]) : Number((s as any).group)) : 0;
+                    const poolA = isArrayR ? r[1] as bigint : (r as any).poolA as bigint;
+                    const poolB = isArrayR ? r[2] as bigint : (r as any).poolB as bigint;
+                    const roundCompleted = isArrayR ? r[6] as boolean : (r as any).isCompleted as boolean;
+                    const winningGroup = Number(isArrayR ? r[8] : (r as any).winningGroup);
+                    const timestamp = Number(isArrayR ? r[4] : (r as any).createdAt);
+
+                    const stateAmt = isArrayS ? s[0] as bigint : (s as any).amount as bigint;
+                    const stateGrp = Number(isArrayS ? s[1] : (s as any).group);
 
                     if (stateGrp > 0) {
                         const stakeLog = logMap.get(`StakePlaced_${rId}`);
                         const claimLog = logMap.get(`PayoutClaimed_${rId}`);
 
-                        let stakeAmt = "0.001+";
-                        if (stateAmt > 0n) {
-                            stakeAmt = formatEther(stateAmt);
-                        } else if (stakeLog?.amount) {
-                            stakeAmt = formatEther(stakeLog.amount);
-                        }
+                        const isWinner = roundCompleted && winningGroup === stateGrp;
+                        const isClaimed = roundCompleted && isWinner && stateAmt === 0n;
 
-                        let payoutAmt = claimLog ? formatEther(claimLog.amount) : undefined;
-                        let isClaimed = stateAmt === 0n && roundCompleted && stateGrp === roundWinningGroup;
+                        // Calculate original stake amount
+                        let originalStakeBn = stateAmt > 0n ? stateAmt : (stakeLog?.amount || 0n);
 
-                        // The primary 'amount' to display:
-                        // If it's a win and we have a payout log, show the PAYOUT.
-                        // Otherwise (loss, pending, or unclaimed win) show the STAKE.
-                        let displayAmount = stakeAmt;
-                        if (isClaimed && payoutAmt) {
-                            displayAmount = payoutAmt;
+                        // If we still have 0 (e.g. claimed win and logs failed), fallback to 0.001 ETH
+                        if (originalStakeBn === 0n) originalStakeBn = 1000000000000000n;
+
+                        let displayAmount = formatEther(originalStakeBn);
+                        let payoutAmount: string | undefined = undefined;
+
+                        if (isWinner) {
+                            // Calculate accurate win amount: Stake + (Opponent Pool * 0.99 * MyShare)
+                            try {
+                                const winningPool = winningGroup === 1 ? poolA : poolB;
+                                const losingPool = winningGroup === 1 ? poolB : poolA;
+
+                                if (winningPool > 0n && losingPool > 0n) {
+                                    const payoutPool = (losingPool * 99n) / 100n;
+                                    const userShare = (originalStakeBn * payoutPool) / winningPool;
+                                    const calculatedPayout = originalStakeBn + userShare;
+
+                                    // Use the claim log amount if available, otherwise use calculated
+                                    payoutAmount = claimLog ? formatEther(claimLog.amount) : formatEther(calculatedPayout);
+                                    displayAmount = payoutAmount;
+                                }
+                            } catch (err) {
+                                console.error(`[History] Calc failed for round ${rId}`, err);
+                            }
                         }
 
                         finalHistory.push({
                             roundId: rId,
                             amount: displayAmount,
+                            stakeAmount: formatEther(originalStakeBn),
                             group: stateGrp,
-                            winningGroup: roundWinningGroup,
+                            winningGroup: winningGroup,
                             isCompleted: roundCompleted,
-                            timestamp: roundTimestamp,
-                            payout: payoutAmt,
-                            isClaimed: isClaimed
+                            timestamp,
+                            payout: payoutAmount,
+                            isClaimed,
+                            isWinner
                         });
                     }
                 }
             }
 
             setHistory(finalHistory.sort((a, b) => b.roundId - a.roundId));
-
         } catch (error) {
             console.error("[useUserHistory] Sync Error:", error);
         } finally {
