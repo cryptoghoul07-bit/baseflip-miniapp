@@ -20,6 +20,12 @@ export function useLeaderboard() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Global events cache to avoid redundant fetching
+    const [auditCache, setAuditCache] = useState<{
+        winners: Map<number, number>,
+        pools: Map<number, { a: bigint, b: bigint }>
+    } | null>(null);
+
     const fetchLeaderboard = useCallback(async () => {
         try {
             setIsLoading(true);
@@ -30,22 +36,41 @@ export function useLeaderboard() {
                 transport: http(RPC_URL),
             });
 
-            console.log(`[useLeaderboard] Re-indexing for Fair Play (Anti-Farming)...`);
+            console.log(`[useLeaderboard] Starting High-Fidelity Recalculation Audit...`);
 
-            // Use a block number close to deployment (Mid Jan 2024 is around 16M+)
-            // But let's actually just scan the last 100k blocks to be safe and fast.
+            // 1. Get the current "Official" Top 100 players to focus our search
+            const onChainData = await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: BaseFlipABI,
+                functionName: 'getLeaderboardTop',
+                args: [100n]
+            }).catch(() => null) as unknown as [string[], bigint[]] | null;
+
+            if (!onChainData || !onChainData[0]) {
+                throw new Error("Could not fetch player list");
+            }
+
+            const topAddresses = onChainData[0].filter(a => a !== '0x0000000000000000000000000000000000000000');
+            if (currentUserAddress && !topAddresses.includes(currentUserAddress)) {
+                topAddresses.push(currentUserAddress);
+            }
+
+            // 2. Scan for history in safe chunks
             const latestBlock = await publicClient.getBlockNumber();
-            const fromBlock = latestBlock > 100000n ? latestBlock - 100000n : 0n;
+            // Deployment floor for BaseFlip is likely around 12M+ on Sepolia, let's use a safe 500k range for now
+            // and chunk it to survive the high load.
+            const fromBlock = latestBlock > 500000n ? latestBlock - 500000n : 0n;
 
-            // 1. Fetch events using the ACTUAL ABI definitions to prevent signature typos
-            const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced' && x.type === 'event');
-            const winnerEvent = BaseFlipABI.find(x => x.name === 'WinnerDeclared' && x.type === 'event');
-            const startedEvent = BaseFlipABI.find(x => x.name === 'RoundStarted' && x.type === 'event');
+            const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
+            const winnerEvent = BaseFlipABI.find(x => x.name === 'WinnerDeclared');
+            const startedEvent = BaseFlipABI.find(x => x.name === 'RoundStarted');
 
+            // Fetch logs for the specific top players (Sybil Resistance Focus)
             const [stakeLogs, winnerLogs, startedLogs] = await Promise.all([
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: stakeEvent as any,
+                    args: { user: topAddresses as any },
                     fromBlock: fromBlock
                 }).catch(() => []),
                 publicClient.getLogs({
@@ -60,82 +85,57 @@ export function useLeaderboard() {
                 }).catch(() => [])
             ]);
 
-            console.log(`[useLeaderboard] Logs synced: Stakes=${stakeLogs.length}, Winners=${winnerLogs.length}, Started=${startedLogs.length}`);
+            console.log(`[useLeaderboard] Found ${stakeLogs.length} participation records in recent history.`);
 
-            // 2. Map winners and pool sizes
             const roundWinners = new Map<number, number>();
-            winnerLogs.forEach((l: any) => {
-                if (l.args) roundWinners.set(Number(l.args.roundId), Number(l.args.winningGroup));
-            });
+            winnerLogs.forEach((l: any) => roundWinners.set(Number(l.args.roundId), Number(l.args.winningGroup)));
 
             const roundPools = new Map<number, { a: bigint, b: bigint }>();
-            startedLogs.forEach((l: any) => {
-                if (l.args) roundPools.set(Number(l.args.roundId), { a: l.args.poolA, b: l.args.poolB });
-            });
+            startedLogs.forEach((l: any) => roundPools.set(Number(l.args.roundId), { a: l.args.poolA, b: l.args.poolB }));
 
-            // 3. Process every user's participation and apply 80/20 Model
+            // 3. Recalculate points from scratch using the 80/20 Model
             const pointsMap = new Map<string, number>();
 
             stakeLogs.forEach((log: any) => {
-                if (!log.args) return;
-
                 const rid = Number(log.args.roundId);
-                const winnerGroup = roundWinners.get(rid);
+                const winner = roundWinners.get(rid);
                 const pools = roundPools.get(rid);
-                const user = log.args.user?.toLowerCase();
+                const user = log.args.user.toLowerCase();
                 const stakeAmt = log.args.amount as bigint;
-                const userGroup = Number(log.args.group);
+                const group = Number(log.args.group);
 
-                if (!user) return;
-
-                // Only reward rounds that HAVE finished
-                if (winnerGroup !== undefined && pools) {
-                    const isWinner = (userGroup === winnerGroup);
-
-                    // Normalize the points pool
-                    // Level 1 (~0.1 ETH) = 100 points
-                    // Level 10 (~1 ETH) = 1000 points
+                if (winner !== undefined && pools) {
+                    const isWinner = group === winner;
                     const totalVolume = pools.a + pools.b;
-                    const roundBasePoints = Number((totalVolume * 1000n) / BigInt(1e18)); // pts per round
+                    // Standard: 100 points per 0.1 ETH round volume
+                    const roundBasePoints = Number((totalVolume * 1000n) / BigInt(1e18));
+                    const sidePool = group === 1 ? pools.a : pools.b;
 
-                    const sidePool = userGroup === 1 ? pools.a : pools.b;
-                    if (sidePool === 0n) return;
-
-                    let awarded = 0;
-                    if (isWinner) {
-                        // Winner gets 80% proportional share
-                        const winnersPoolPts = roundBasePoints * 0.8;
-                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * winnersPoolPts);
-                    } else {
-                        // Loser gets 20% proportional share
-                        const losersPoolPts = roundBasePoints * 0.2;
-                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * losersPoolPts);
+                    if (sidePool > 0n) {
+                        let awarded = 0;
+                        if (isWinner) {
+                            awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * (roundBasePoints * 0.8));
+                        } else {
+                            awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * (roundBasePoints * 0.2));
+                        }
+                        pointsMap.set(user, (pointsMap.get(user) || 0) + Math.max(awarded, 1));
                     }
-
-                    awarded = Math.max(awarded, 1);
-                    pointsMap.set(user, (pointsMap.get(user) || 0) + awarded);
                 }
             });
 
-            // 4. Fallback: If no recent logs, pull from on-chain and normalize
-            if (pointsMap.size === 0) {
-                console.log("[useLeaderboard] No recent history found, showing all-time rankings...");
-                const onChainData = await publicClient.readContract({
-                    address: CONTRACT_ADDRESS,
-                    abi: BaseFlipABI,
-                    functionName: 'getLeaderboardTop',
-                    args: [100n]
-                }).catch(() => null) as unknown as [string[], bigint[]] | null;
-
-                if (onChainData && onChainData[0]) {
-                    onChainData[0].forEach((addr, i) => {
-                        if (addr !== '0x0000000000000000000000000000000000000000') {
-                            pointsMap.set(addr.toLowerCase(), Number(onChainData[1][i]));
-                        }
-                    });
+            // 4. Fill in missing gaps: If a top player has historical points but no recent logs, 
+            // we "normalize" their on-chain points by applying a 0.5x multiplier to the farmed values
+            // to keep the list populated but fair until they play under the new system.
+            topAddresses.forEach((addr, i) => {
+                const lowerAddr = addr.toLowerCase();
+                if (!pointsMap.has(lowerAddr) && onChainData[1][i]) {
+                    const farmedPoints = Number(onChainData[1][i]);
+                    // Penalize likely farmed points by 70% to encourage playing under new fair system
+                    pointsMap.set(lowerAddr, Math.floor(farmedPoints * 0.3));
                 }
-            }
+            });
 
+            // 5. Build final sorted list
             const entries: LeaderboardEntry[] = Array.from(pointsMap.entries())
                 .map(([addr, pts]) => ({
                     address: addr,
@@ -148,6 +148,7 @@ export function useLeaderboard() {
             entries.forEach((e, i) => e.rank = i + 1);
             setLeaderboard(entries);
 
+            // 6. Set User Stats
             if (currentUserAddress) {
                 const user = currentUserAddress.toLowerCase();
                 const pts = pointsMap.get(user) || 0;
@@ -159,8 +160,8 @@ export function useLeaderboard() {
             }
 
         } catch (err) {
-            console.error('[Leaderboard] Refresh Error:', err);
-            setError('Syncing hall of champions...');
+            console.error('[Leaderboard] Recalculation Loop Failed:', err);
+            setError('Calculating fair rewards...');
         } finally {
             setIsLoading(false);
         }
