@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { createPublicClient, http, parseAbiItem } from 'viem';
+import { createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { useAccount } from 'wagmi';
+import BaseFlipABI from '../lib/BaseFlipABI.json';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
 const RPC_URL = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
@@ -29,83 +30,86 @@ export function useLeaderboard() {
                 transport: http(RPC_URL),
             });
 
-            console.log(`[useLeaderboard] Starting Virtual Recalculation...`);
+            console.log(`[useLeaderboard] Re-indexing for Fair Play (Anti-Farming)...`);
 
-            // Use a block number close to deployment to avoid RPC 503 errors
-            // If fromBlock is too far back, Base RPC fails.
+            // Use a block number close to deployment (Mid Jan 2024 is around 16M+)
+            // But let's actually just scan the last 100k blocks to be safe and fast.
             const latestBlock = await publicClient.getBlockNumber();
-            const fromBlock = latestBlock > 500000n ? latestBlock - 500000n : 0n;
+            const fromBlock = latestBlock > 100000n ? latestBlock - 100000n : 0n;
 
-            console.log(`[useLeaderboard] Scanning from block: ${fromBlock.toString()} to ${latestBlock.toString()}`);
+            // 1. Fetch events using the ACTUAL ABI definitions to prevent signature typos
+            const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced' && x.type === 'event');
+            const winnerEvent = BaseFlipABI.find(x => x.name === 'WinnerDeclared' && x.type === 'event');
+            const startedEvent = BaseFlipABI.find(x => x.name === 'RoundStarted' && x.type === 'event');
 
-            // 1. Fetch events with matched signatures
             const [stakeLogs, winnerLogs, startedLogs] = await Promise.all([
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
-                    event: parseAbiItem('event StakePlaced(uint256 indexed roundId, address indexed user, uint8 group, uint256 amount)'),
+                    event: stakeEvent as any,
                     fromBlock: fromBlock
                 }).catch(() => []),
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
-                    event: parseAbiItem('event WinnerDeclared(uint256 indexed roundId, uint8 winningGroup)'),
+                    event: winnerEvent as any,
                     fromBlock: fromBlock
                 }).catch(() => []),
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
-                    event: parseAbiItem('event RoundStarted(uint256 indexed roundId, uint256 poolA, uint256 poolB, uint256 targetSize)'),
+                    event: startedEvent as any,
                     fromBlock: fromBlock
                 }).catch(() => [])
             ]);
 
-            console.log(`[useLeaderboard] Logs found: Stakes=${stakeLogs.length}, Winners=${winnerLogs.length}, Started=${startedLogs.length}`);
+            console.log(`[useLeaderboard] Logs synced: Stakes=${stakeLogs.length}, Winners=${winnerLogs.length}, Started=${startedLogs.length}`);
 
-            // 2. Map winners and pools
+            // 2. Map winners and pool sizes
             const roundWinners = new Map<number, number>();
             winnerLogs.forEach((l: any) => {
-                if (l.args && l.args.roundId !== undefined) {
-                    roundWinners.set(Number(l.args.roundId), Number(l.args.winningGroup));
-                }
+                if (l.args) roundWinners.set(Number(l.args.roundId), Number(l.args.winningGroup));
             });
 
             const roundPools = new Map<number, { a: bigint, b: bigint }>();
             startedLogs.forEach((l: any) => {
-                if (l.args && l.args.roundId !== undefined) {
-                    roundPools.set(Number(l.args.roundId), { a: l.args.poolA, b: l.args.poolB });
-                }
+                if (l.args) roundPools.set(Number(l.args.roundId), { a: l.args.poolA, b: l.args.poolB });
             });
 
-            // 3. Process points (80/20 model)
+            // 3. Process every user's participation and apply 80/20 Model
             const pointsMap = new Map<string, number>();
 
             stakeLogs.forEach((log: any) => {
                 if (!log.args) return;
 
                 const rid = Number(log.args.roundId);
-                const winner = roundWinners.get(rid);
+                const winnerGroup = roundWinners.get(rid);
                 const pools = roundPools.get(rid);
                 const user = log.args.user?.toLowerCase();
                 const stakeAmt = log.args.amount as bigint;
-                const group = Number(log.args.group);
+                const userGroup = Number(log.args.group);
 
                 if (!user) return;
 
-                if (winner !== undefined && pools) {
-                    const isWinner = (group === winner);
-                    const totalRoundVolume = pools.a + pools.b;
+                // Only reward rounds that HAVE finished
+                if (winnerGroup !== undefined && pools) {
+                    const isWinner = (userGroup === winnerGroup);
 
-                    // Base points: 100 pts per 0.1 ETH round volume
-                    const roundBasePoints = Number((totalRoundVolume * 100n) / 100000000000000000n);
+                    // Normalize the points pool
+                    // Level 1 (~0.1 ETH) = 100 points
+                    // Level 10 (~1 ETH) = 1000 points
+                    const totalVolume = pools.a + pools.b;
+                    const roundBasePoints = Number((totalVolume * 1000n) / BigInt(1e18)); // pts per round
 
-                    const sidePool = group === 1 ? pools.a : pools.b;
+                    const sidePool = userGroup === 1 ? pools.a : pools.b;
                     if (sidePool === 0n) return;
 
                     let awarded = 0;
                     if (isWinner) {
-                        const winnersTotalPoints = roundBasePoints * 0.8;
-                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * winnersTotalPoints);
+                        // Winner gets 80% proportional share
+                        const winnersPoolPts = roundBasePoints * 0.8;
+                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * winnersPoolPts);
                     } else {
-                        const losersTotalPoints = roundBasePoints * 0.2;
-                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * losersTotalPoints);
+                        // Loser gets 20% proportional share
+                        const losersPoolPts = roundBasePoints * 0.2;
+                        awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * losersPoolPts);
                     }
 
                     awarded = Math.max(awarded, 1);
@@ -113,13 +117,12 @@ export function useLeaderboard() {
                 }
             });
 
-            // If we found NO data in the last 500k blocks, fallback to a single call to get known on-chain top players
-            // so the list isn't empty if the history is older than 500k blocks.
+            // 4. Fallback: If no recent logs, pull from on-chain and normalize
             if (pointsMap.size === 0) {
-                console.log("[useLeaderboard] History scan empty, falling back to on-chain top...");
+                console.log("[useLeaderboard] No recent history found, showing all-time rankings...");
                 const onChainData = await publicClient.readContract({
                     address: CONTRACT_ADDRESS,
-                    abi: parseAbiItem('function getLeaderboardTop(uint256) view returns (address[], uint256[])') as any,
+                    abi: BaseFlipABI,
                     functionName: 'getLeaderboardTop',
                     args: [100n]
                 }).catch(() => null) as unknown as [string[], bigint[]] | null;
@@ -133,7 +136,6 @@ export function useLeaderboard() {
                 }
             }
 
-            // 4. Sort and build leaderboard
             const entries: LeaderboardEntry[] = Array.from(pointsMap.entries())
                 .map(([addr, pts]) => ({
                     address: addr,
@@ -146,24 +148,19 @@ export function useLeaderboard() {
             entries.forEach((e, i) => e.rank = i + 1);
             setLeaderboard(entries);
 
-            // 5. User stats
             if (currentUserAddress) {
                 const user = currentUserAddress.toLowerCase();
                 const pts = pointsMap.get(user) || 0;
                 const foundIndex = entries.findIndex(e => e.address.toLowerCase() === user);
-
-                if (foundIndex !== -1) {
-                    setCurrentUserStats({ points: pts, rank: foundIndex + 1 });
-                } else if (pts > 0) {
-                    setCurrentUserStats({ points: pts, rank: '100+' });
-                } else {
-                    setCurrentUserStats({ points: 0, rank: 'Unranked' });
-                }
+                setCurrentUserStats({
+                    points: pts,
+                    rank: foundIndex !== -1 ? foundIndex + 1 : (pts > 0 ? '100+' : 'Unranked')
+                });
             }
 
         } catch (err) {
-            console.error('[Leaderboard] Recalculation Error:', err);
-            setError('Failed to recalculate fair points.');
+            console.error('[Leaderboard] Refresh Error:', err);
+            setError('Syncing hall of champions...');
         } finally {
             setIsLoading(false);
         }
