@@ -16,18 +16,9 @@
   border: 1px solid var(--border-glow);
   border-radius: var(--border-radius-xl);
   position: relative;
-  overflow: hidden;
 }
 
-.header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--gradient-blue);
-}
+/* Removed header::before blue line to prevent flicker glitch on mobile */
 
 .headerTop {
   display: flex;
@@ -313,6 +304,9 @@
     width: 100% !important;
     font-size: 0.85rem !important;
     padding: 10px 16px !important;
+    box-shadow: none !important;
+    /* Remove glow on mobile to prevent rect glitch */
+    transform: none !important;
   }
 
   .walletDropdown {

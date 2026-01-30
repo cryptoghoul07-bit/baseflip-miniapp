@@ -50,14 +50,18 @@
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
   -webkit-tap-highlight-color: transparent !important;
   -webkit-touch-callout: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
   outline: none !important;
 }
 
 *:focus,
 *:active,
-*:hover {
+*:hover,
+*:visited {
   outline: none !important;
   -webkit-tap-highlight-color: transparent !important;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0) !important;
 }
 
 html,
