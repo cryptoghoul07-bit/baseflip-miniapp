@@ -62,6 +62,13 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  /* Disable mobile tap highlight "glitch" */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Global focus override to prevent default browser blue rectangles */
+:focus {
+  outline: none !important;
 }
 
 /* Grid background pattern */
