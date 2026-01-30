@@ -183,14 +183,53 @@
 }
 
 /* Claim Banner */
-.claimBanner {
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.15) 100%);
-  border: 2px solid var(--gold);
+.claimBanner,
+.lossBanner {
   border-radius: var(--border-radius-lg);
   padding: 24px;
   text-align: center;
+  animation: pulse-glow-vibrant 2s ease-in-out infinite;
+  margin-bottom: 20px;
+}
+
+.claimBanner {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.15) 100%);
+  border: 2px solid var(--gold);
   box-shadow: var(--glow-gold);
-  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.lossBanner {
+  background: linear-gradient(135deg, rgba(255, 93, 93, 0.1) 0%, rgba(255, 0, 0, 0.1) 100%);
+  border: 2px solid #FF5D5D;
+  box-shadow: 0 0 20px rgba(255, 93, 93, 0.3);
+}
+
+@keyframes pulse-glow-vibrant {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+.lossContent h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: #FF5D5D;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.lossContent p {
+  color: var(--text-secondary);
+  font-size: 1rem;
 }
 
 .claimContent h3 {

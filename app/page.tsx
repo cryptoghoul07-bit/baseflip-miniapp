@@ -91,6 +91,7 @@ export default function Home() {
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [recentLoss, setRecentLoss] = useState<{ roundId: number, amount: string } | null>(null);
 
   const { history, recordRoundResult } = useUserHistory();
   const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(() => {
@@ -159,6 +160,13 @@ export default function Home() {
               timestamp: createdAt || Math.floor(Date.now() / 1000),
               isClaimed: false
             });
+
+            // If user lost, show the loss banner temporarily
+            if (!isWinner) {
+              setRecentLoss({ roundId: Number(lastWinner.id), amount: formatEther(stakeAmtBn) });
+              // Clear after 10 seconds
+              setTimeout(() => setRecentLoss(null), 10000);
+            }
           }
         }
       }
@@ -320,6 +328,29 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {recentLoss && (
+            <div className={styles.lossBanner}>
+              <div className={styles.lossContent}>
+                <h3>📉 Round #{recentLoss.roundId} Result</h3>
+                <p>Better luck next time! Your bet of {recentLoss.amount} ETH didn't catch the flip.</p>
+                <button
+                  onClick={() => setRecentLoss(null)}
+                  style={{
+                    marginTop: '10px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: 'white',
+                    padding: '4px 8px',
+                    fontSize: '0.7rem'
+                  }}
+                >
+                  Dismiss
+                </button>
               </div>
             </div>
           )}
