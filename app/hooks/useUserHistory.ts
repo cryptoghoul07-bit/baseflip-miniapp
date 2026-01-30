@@ -7,11 +7,12 @@ const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '
 
 export interface HistoryItem {
     roundId: number;
-    amount: string; // The primary amount to display (Stake for Pending/Loss, Payout for Win)
+    amount: string; // The primary display amount
     stakeAmount: string; // The original stake
     group: number; // 1 = A, 2 = B
     winningGroup: number; // 0 if pending
     isCompleted: boolean;
+    isCancelled: boolean;
     isWinner: boolean;
     timestamp: number;
     payout?: string;
@@ -28,7 +29,6 @@ export function useUserHistory() {
 
         setIsLoading(true);
         try {
-            // 1. Get current state info
             const currentIdBn = await publicClient.readContract({
                 address: CONTRACT_ADDRESS,
                 abi: BaseFlipABI,
@@ -36,7 +36,7 @@ export function useUserHistory() {
             }) as bigint;
             const currentId = Number(currentIdBn);
 
-            // 2. Scan recent rounds (limit to 50 for performance and reliability)
+            // Scan last 50 rounds
             const roundsToScan = Array.from({ length: Math.min(currentId, 50) }, (_, i) => currentId - i).filter(id => id > 0);
             const contracts: any[] = [];
             roundsToScan.forEach(id => {
@@ -44,14 +44,18 @@ export function useUserHistory() {
                 contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
             });
 
-            // 3. Fetch data and logs
+            // Fetch only necessary logs (Claim logs for exact payouts)
+            // Use a block from ~3 days ago (Base block time ~2s, so ~130k blocks) to be safe and fast
+            const latestBlock = await publicClient.getBlockNumber();
+            const fromBlock = latestBlock > 200000n ? latestBlock - 200000n : 0n;
+
             const [multicallResults, claimLogs] = await Promise.all([
                 publicClient.multicall({ contracts: contracts as any, allowFailure: true }),
                 publicClient.getLogs({
                     address: CONTRACT_ADDRESS,
                     event: BaseFlipABI.find(x => x.name === 'PayoutClaimed') as any,
                     args: { user: address },
-                    fromBlock: 'earliest'
+                    fromBlock: fromBlock
                 }).catch(() => [])
             ]);
 
@@ -71,56 +75,47 @@ export function useUserHistory() {
                     const r = rRes.result as any;
                     const s = sRes.result as any;
 
-                    // Parse round data from array or object
                     const isRArr = Array.isArray(r);
-                    const poolA = isRArr ? r[1] : r.poolA;
-                    const poolB = isRArr ? r[2] : r.poolB;
-                    const isCompleted = isRArr ? r[6] : r.isCompleted;
-                    const winningGroup = Number(isRArr ? r[8] : r.winningGroup);
-                    const createdAt = Number(isRArr ? r[4] : r.createdAt);
+                    const poolA = isRArr ? r[1] : (r as any).poolA;
+                    const poolB = isRArr ? r[2] : (r as any).poolB;
+                    const isCompleted = isRArr ? r[6] : (r as any).isCompleted;
+                    const isCancelled = isRArr ? r[7] : (r as any).isCancelled;
+                    const winningGroup = Number(isRArr ? r[8] : (r as any).winningGroup);
+                    const timestamp = Number(isRArr ? r[4] : (r as any).createdAt);
 
-                    // Parse user stake info
                     const isSArr = Array.isArray(s);
-                    const stakeAmtBn = isSArr ? s[0] as bigint : s.amount as bigint;
-                    const userGroup = Number(isSArr ? s[1] : s.group);
+                    const stakeAmtBn = isSArr ? s[0] as bigint : (s as any).amount as bigint;
+                    const userGroup = Number(isSArr ? s[1] : (s as any).group);
 
-                    // If user participated in this round (group 1 or 2)
                     if (userGroup > 0) {
-                        const isWinner = isCompleted && winningGroup === userGroup;
+                        const isWinner = isCompleted && !isCancelled && winningGroup === userGroup;
                         const claimLog = claimLogMap.get(`PayoutClaimed_${rId}`);
 
-                        // Get accurate stake amount (for claimed wins, it's 0 in state, so we estimate/use log if possible)
-                        // But since we want "reliable amounts", we use fallback for claimed wins if logs fail.
-                        let stakeValue = stakeAmtBn > 0n ? formatEther(stakeAmtBn) : (claimLog ? "0.001+" : "0.001+");
+                        // Get accurate stake from log or state (state is 0 if claimed, fallback to 0.001 but usually logs work)
+                        let stakeValue = (stakeAmtBn > 0n) ? formatEther(stakeAmtBn) : "0.001+";
 
                         let displayValue = stakeValue;
                         let payoutValue: string | undefined = undefined;
 
                         if (isWinner) {
                             if (claimLog) {
-                                // ACTUAL amount from the blockchain event (100% accurate)
                                 displayValue = formatEther(claimLog.amount);
-                                payoutValue = displayValue;
                             } else {
-                                // Calculate potential winnings based on pools
-                                // WIN = MyStake + (OpponentPool * 0.99 * (MyStake/MyPool))
+                                // Calculate pro-rata payout matching contract logic
+                                // totalPayout = userStake.amount + ((userStake.amount * (losingPool * 0.99)) / winningPool)
                                 try {
-                                    const myPool = winningGroup === 1 ? poolA : poolB;
-                                    const opPool = winningGroup === 1 ? poolB : poolA;
-                                    // Use 0.001 as fallback stake if state is 0 (claimed)
-                                    const calcStake = stakeAmtBn > 0n ? stakeAmtBn : 1000000000000000n;
+                                    const winningPool = winningGroup === 1 ? poolA : poolB;
+                                    const losingPool = winningGroup === 1 ? poolB : poolA;
+                                    const calcStake = stakeAmtBn > 0n ? stakeAmtBn : 1000000000000000n; // fallback min-bet
 
-                                    if (myPool > 0n) {
-                                        const payoutPool = (BigInt(opPool) * 99n) / 100n;
-                                        const share = (calcStake * payoutPool) / BigInt(myPool);
-                                        const total = calcStake + share;
-                                        displayValue = formatEther(total);
-                                        payoutValue = displayValue;
+                                    if (winningPool > 0n) {
+                                        const payoutTotalPool = (BigInt(losingPool) * 99n) / 100n;
+                                        const userShare = (calcStake * payoutTotalPool) / BigInt(winningPool);
+                                        displayValue = formatEther(calcStake + userShare);
                                     }
-                                } catch (e) {
-                                    console.error("Payout calc failed", e);
-                                }
+                                } catch (e) { console.error(e); }
                             }
+                            payoutValue = displayValue;
                         }
 
                         finalHistory.push({
@@ -130,17 +125,17 @@ export function useUserHistory() {
                             group: userGroup,
                             winningGroup,
                             isCompleted,
+                            isCancelled,
                             isWinner,
-                            timestamp: createdAt,
+                            timestamp,
                             payout: payoutValue
                         });
                     }
                 }
             }
-
             setHistory(finalHistory.sort((a, b) => b.roundId - a.roundId));
         } catch (error) {
-            console.error("[useUserHistory] Fatal Sync Error:", error);
+            console.error("[useUserHistory] Sync Error:", error);
         } finally {
             setIsLoading(false);
         }
