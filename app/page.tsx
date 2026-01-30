@@ -226,20 +226,7 @@ export default function Home() {
         </div>
         <p className={styles.subtitle}>The Ultimate Onchain Prediction Game • Stake. Predict. Win.</p>
         <div className={styles.walletButton}>
-          <Wallet>
-            <ConnectWallet className={styles.connectButton}>
-              <Avatar className="h-6 w-6" />
-              <Name />
-            </ConnectWallet>
-            <WalletDropdown className={styles.walletDropdown}>
-              <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
-                <Avatar />
-                <Name />
-                <Address />
-              </Identity>
-              <WalletDropdownDisconnect className={styles.disconnectButton} />
-            </WalletDropdown>
-          </Wallet>
+          <ConnectWallet>Connect to Play</ConnectWallet>
         </div>
       </div>
 

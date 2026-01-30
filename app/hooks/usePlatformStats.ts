@@ -15,6 +15,10 @@ export function usePlatformStats() {
         if (!publicClient || !CONTRACT_ADDRESS) return;
 
         const fetchVolume = async () => {
+            // Wait 3s before starting heavy stats calculation
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            if (!publicClient) return;
+
             try {
                 // 1. Get current round ID
                 const currentId = await publicClient.readContract({

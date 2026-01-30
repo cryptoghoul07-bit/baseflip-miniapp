@@ -5,7 +5,7 @@ import { useAccount } from 'wagmi';
 import BaseFlipABI from '../lib/BaseFlipABI.json';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
-const RPC_URL = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
+const RPC_URL = 'https://sepolia.base.org';
 
 export interface LeaderboardEntry {
     address: string;
@@ -19,12 +19,6 @@ export function useLeaderboard() {
     const [currentUserStats, setCurrentUserStats] = useState<{ points: number, rank: number | string } | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // Global events cache to avoid redundant fetching
-    const [auditCache, setAuditCache] = useState<{
-        winners: Map<number, number>,
-        pools: Map<number, { a: bigint, b: bigint }>
-    } | null>(null);
 
     const fetchLeaderboard = useCallback(async () => {
         try {
@@ -57,8 +51,6 @@ export function useLeaderboard() {
 
             // 2. Scan for history in safe chunks
             const latestBlock = await publicClient.getBlockNumber();
-            // Deployment floor for BaseFlip is likely around 12M+ on Sepolia, let's use a safe 500k range for now
-            // and chunk it to survive the high load.
             const fromBlock = latestBlock > 500000n ? latestBlock - 500000n : 0n;
 
             const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
@@ -123,14 +115,11 @@ export function useLeaderboard() {
                 }
             });
 
-            // 4. Fill in missing gaps: If a top player has historical points but no recent logs, 
-            // we "normalize" their on-chain points by applying a 0.5x multiplier to the farmed values
-            // to keep the list populated but fair until they play under the new system.
+            // 4. Fill in missing gaps: Normalize historical farmed points
             topAddresses.forEach((addr, i) => {
                 const lowerAddr = addr.toLowerCase();
                 if (!pointsMap.has(lowerAddr) && onChainData[1][i]) {
                     const farmedPoints = Number(onChainData[1][i]);
-                    // Penalize likely farmed points by 70% to encourage playing under new fair system
                     pointsMap.set(lowerAddr, Math.floor(farmedPoints * 0.3));
                 }
             });
@@ -160,17 +149,24 @@ export function useLeaderboard() {
             }
 
         } catch (err) {
-            console.error('[Leaderboard] Recalculation Loop Failed:', err);
-            setError('Calculating fair rewards...');
+            console.error('[Leaderboard] Refresh Loop Failed:', err);
+            setError('Syncing hall of champions...');
         } finally {
             setIsLoading(false);
         }
     }, [currentUserAddress]);
 
     useEffect(() => {
-        fetchLeaderboard();
+        // Delay initial deep audit to prioritize wallet connection speed
+        const timer = setTimeout(() => {
+            fetchLeaderboard();
+        }, 2500);
+
         const interval = setInterval(fetchLeaderboard, 60000);
-        return () => clearInterval(interval);
+        return () => {
+            clearTimeout(timer);
+            clearInterval(interval);
+        };
     }, [fetchLeaderboard]);
 
     return { leaderboard, currentUserStats, isLoading, error, refetch: fetchLeaderboard };

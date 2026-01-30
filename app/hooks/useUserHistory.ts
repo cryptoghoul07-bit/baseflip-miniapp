@@ -156,7 +156,18 @@ export function useUserHistory() {
 
     useEffect(() => {
         if (address) {
-            syncWithBlockchain();
+            // Delay initial sync to prevent blocking the UI during wallet connection/init
+            const timer = setTimeout(() => {
+                syncWithBlockchain();
+            }, 2000); // Changed delay to 2000ms
+
+            // Also add an interval for periodic refetching
+            const interval = setInterval(syncWithBlockchain, 60000); // Refetch every 60 seconds
+
+            return () => {
+                clearTimeout(timer);
+                clearInterval(interval);
+            };
         }
     }, [address, syncWithBlockchain]);
 

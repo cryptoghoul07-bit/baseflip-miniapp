@@ -89,6 +89,9 @@
   display: flex;
   justify-content: center;
   margin-top: 16px;
+  min-height: 48px;
+  z-index: 100;
+  position: relative;
 }
 
 /* Loading States */
