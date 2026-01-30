@@ -343,6 +343,21 @@
         font-size: 0.6rem;
     }
 
+    /* Pagination Mobile */
+    .pagination {
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .pageButton {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+
+    .pageIndicator {
+        font-size: 0.8rem;
+    }
+
     .rulesSection {
         margin-top: 32px;
         padding: 24px;
