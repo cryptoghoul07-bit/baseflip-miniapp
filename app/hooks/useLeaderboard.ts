@@ -124,7 +124,30 @@ export function useLeaderboard() {
                 }
             });
 
-            // 5. Build final sorted list
+            // 5. Add Referral Points (Off-chain with Proof of Play)
+            try {
+                const refRes = await fetch('/api/referrals?raw=true');
+                const refData = await refRes.json();
+                if (refData.referrals) {
+                    Object.entries(refData.referrals).forEach(([referrer, referees]) => {
+                        const lowReferrer = referrer.toLowerCase();
+                        const qualifiedReferees = (referees as string[]).filter(referee => {
+                            const lowReferee = referee.toLowerCase();
+                            // Qualification check: Referee must have earned at least 1 point from playing
+                            return (pointsMap.get(lowReferee) || 0) > 0;
+                        });
+
+                        if (qualifiedReferees.length > 0) {
+                            const bonusPoints = qualifiedReferees.length * 5; // 5 points per qualified referral
+                            pointsMap.set(lowReferrer, (pointsMap.get(lowReferrer) || 0) + bonusPoints);
+                        }
+                    });
+                }
+            } catch (refErr) {
+                console.warn('[Leaderboard] Could not fetch referral bonus points:', refErr);
+            }
+
+            // 6. Build final sorted list
             const entries: LeaderboardEntry[] = Array.from(pointsMap.entries())
                 .map(([addr, pts]) => ({
                     address: addr,
@@ -137,7 +160,7 @@ export function useLeaderboard() {
             entries.forEach((e, i) => e.rank = i + 1);
             setLeaderboard(entries);
 
-            // 6. Set User Stats
+            // 7. Set User Stats
             if (currentUserAddress) {
                 const user = currentUserAddress.toLowerCase();
                 const pts = pointsMap.get(user) || 0;

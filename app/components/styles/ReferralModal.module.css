@@ -1,0 +1,201 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.modal {
+    background: linear-gradient(135deg, #1A1C1E 0%, #0F172A 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 440px;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalAppear 0.3s ease-out;
+}
+
+@keyframes modalAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.closeButton {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: #94A3B8;
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.closeButton:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.content {
+    padding: 32px;
+    text-align: center;
+}
+
+.icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.content h2 {
+    color: white;
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.subtitle {
+    color: #94A3B8;
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+}
+
+.statsRow {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.statCard {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.statValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #00D4FF;
+}
+
+.statLabel {
+    font-size: 0.75rem;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+}
+
+.referralSection {
+    text-align: left;
+    margin-bottom: 24px;
+}
+
+.label {
+    font-size: 0.85rem;
+    color: #94A3B8;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.linkContainer {
+    display: flex;
+    gap: 8px;
+}
+
+.linkInput {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #E2E8F0;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.linkInput:focus {
+    border-color: #00D4FF;
+}
+
+.copyButton {
+    background: #00D4FF;
+    border: none;
+    color: #0F172A;
+    font-weight: 600;
+    padding: 0 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    font-size: 0.9rem;
+}
+
+.copyButton:hover {
+    background: #00C4EB;
+    transform: translateY(-1px);
+}
+
+.copyButton:active {
+    transform: translateY(0);
+}
+
+.infoBox {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 24px;
+    color: #00D4FF;
+    font-size: 0.9rem;
+}
+
+.infoBox p {
+    margin: 0;
+}
+
+.ctaButton {
+    width: 100%;
+    background: linear-gradient(to right, #00D4FF, #0055FF);
+    border: none;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 16px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(0, 85, 255, 0.3);
+}
+
+.ctaButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 85, 255, 0.4);
+}

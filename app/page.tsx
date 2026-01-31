@@ -29,6 +29,8 @@ import styles from "./page.module.css";
 import { usePlatformStats } from "./hooks/usePlatformStats";
 import { useEthPrice } from "./hooks/useEthPrice";
 import HistoryModal from "./components/HistoryModal/HistoryModal";
+import ReferralModal from "./components/ReferralModal";
+import { useReferrals } from "./hooks/useReferrals";
 
 // Internal component for stats to keep page clean
 function PlatformStatsBanner() {
@@ -91,9 +93,27 @@ export default function Home() {
   const [isFlipping, setIsFlipping] = useState(false);
   const [flipWinner, setFlipWinner] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
   const [recentLoss, setRecentLoss] = useState<{ roundId: number, amount: string } | null>(null);
 
   const { history, recordRoundResult } = useUserHistory();
+  const { recordReferral } = useReferrals(address);
+
+  // Referral Detection
+  useEffect(() => {
+    if (typeof window !== 'undefined' && address) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      if (refCode && refCode.toLowerCase() !== address.toLowerCase()) {
+        console.log("Referral detected:", refCode);
+        recordReferral(refCode, address);
+        // Clear param from URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [address, recordReferral]);
+
   const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('lastAnimatedRoundId');
@@ -230,6 +250,9 @@ export default function Home() {
           </button>
           <button onClick={() => setShowHistory(true)} className={styles.leaderboardLink}>
             📜 My Bets
+          </button>
+          <button onClick={() => setShowReferral(true)} className={styles.leaderboardLink} style={{ color: '#00D4FF' }}>
+            🤝 Invite
           </button>
         </div>
         <p className={styles.subtitle}>The Ultimate Onchain Prediction Game • Stake. Predict. Win.</p>
@@ -490,6 +513,12 @@ export default function Home() {
       <HistoryModal
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
+      />
+
+      <ReferralModal
+        isOpen={showReferral}
+        onClose={() => setShowReferral(false)}
+        address={address}
       />
     </div>
   );
