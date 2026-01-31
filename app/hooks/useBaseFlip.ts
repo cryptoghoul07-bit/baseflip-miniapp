@@ -280,6 +280,46 @@ export function useBaseFlip() {
         }
     }, [prevRound, prevRoundId]);
 
+    // Streak Protection function
+    const { writeContract: protectStreakWrite, isPending: isProtecting } = useWriteContract();
+
+    const buyStreakProtection = async (roundId: bigint) => {
+        try {
+            protectStreakWrite({
+                address: CONTRACT_ADDRESS,
+                abi: BaseFlipABI,
+                functionName: 'buyStreakProtection',
+                args: [roundId],
+                value: parseEther('0.001'), // STREAK_PROTECTION_FEE
+            });
+        } catch (error) {
+            console.error('Error buying streak protection:', error);
+            throw error;
+        }
+    };
+
+    // Watch for Streak events
+    useWatchContractEvent({
+        address: CONTRACT_ADDRESS,
+        abi: BaseFlipABI,
+        eventName: 'StreakProtected',
+        onLogs(logs) {
+            // Refetch round or simply trigger UI update
+            // Also call API to sync protection status
+            const event = logs[0];
+            if (address && event.args.user === address) {
+                fetch('/api/streaks', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'protect',
+                        address: address,
+                        roundId: Number(event.args.roundId)
+                    })
+                }).catch(console.error);
+            }
+        },
+    });
+
     return {
         roundData,
         userStake,
@@ -297,6 +337,8 @@ export function useBaseFlip() {
         reclaimStake,
         isReclaiming,
         prevRound,
-        prevUserStake
+        prevUserStake,
+        buyStreakProtection,
+        isProtecting
     };
 }

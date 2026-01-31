@@ -138,3 +138,42 @@
     min-width: 260px !important;
     margin-top: 8px !important;
 }
+
+.rulesSection {
+    margin-top: 40px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    color: var(--text-secondary);
+}
+
+.rulesSection h3 {
+    color: #FFD700;
+    margin-bottom: 16px;
+    font-size: 1.2rem;
+}
+
+.rulesSection ul {
+    list-style: none;
+    padding: 0;
+}
+
+.rulesSection li {
+    margin-bottom: 12px;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.5;
+}
+
+.rulesSection li::before {
+    content: "•";
+    color: var(--base-blue);
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+.rulesSection strong {
+    color: var(--text-primary);
+}

@@ -147,7 +147,23 @@ export function useLeaderboard() {
                 console.warn('[Leaderboard] Could not fetch referral bonus points:', refErr);
             }
 
-            // 6. Build final sorted list
+            // 6. Add Streak Bonus Points (Off-chain)
+            try {
+                const streakRes = await fetch('/api/streaks?all=true');
+                const streakData = await streakRes.json();
+                if (streakData) {
+                    Object.entries(streakData).forEach(([addr, data]: [string, any]) => {
+                        const lowAddr = addr.toLowerCase();
+                        if (data.totalBonusPoints > 0) {
+                            pointsMap.set(lowAddr, (pointsMap.get(lowAddr) || 0) + data.totalBonusPoints);
+                        }
+                    });
+                }
+            } catch (streakErr) {
+                console.warn('[Leaderboard] Could not fetch streak bonus points:', streakErr);
+            }
+
+            // 7. Build final sorted list
             const entries: LeaderboardEntry[] = Array.from(pointsMap.entries())
                 .map(([addr, pts]) => ({
                     address: addr,
@@ -160,7 +176,7 @@ export function useLeaderboard() {
             entries.forEach((e, i) => e.rank = i + 1);
             setLeaderboard(entries);
 
-            // 7. Set User Stats
+            // 8. Set User Stats
             if (currentUserAddress) {
                 const user = currentUserAddress.toLowerCase();
                 const pts = pointsMap.get(user) || 0;

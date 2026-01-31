@@ -65,6 +65,10 @@ contract BaseFlip is Ownable, ReentrancyGuard {
     event PointsAwarded(uint256 indexed roundId, address indexed user, uint256 points, bool isWinner);
     event StakeReclaimed(uint256 indexed roundId, address indexed user, uint256 amount);
     event RoundCancelled(uint256 indexed roundId);
+    event StreakProtected(address indexed user, uint256 indexed roundId);
+
+    // ... (existing state variables) ...
+    uint256 public constant STREAK_PROTECTION_FEE = 0.001 ether; // Fee to protect streak
     
     // ============ Constructor ============
     
@@ -197,10 +201,22 @@ contract BaseFlip is Ownable, ReentrancyGuard {
         
         emit WinnerDeclared(_roundId, _winningGroup);
         
-        // Start next round if this was the current round
         if (_roundId == currentRoundId) {
             _startNextRound(round.levelId);
         }
+    }
+
+    /**
+     * @dev Buy streak protection for a round (must be paid before/after loss within timeframe)
+     * @param _roundId Round ID to protect
+     */
+    function buyStreakProtection(uint256 _roundId) external payable nonReentrant {
+        require(msg.value >= STREAK_PROTECTION_FEE, "Insufficient fee");
+        
+        // Add fee to collected fees
+        collectedFees += msg.value;
+        
+        emit StreakProtected(msg.sender, _roundId);
     }
     
     /**

@@ -31,6 +31,8 @@ import { useEthPrice } from "./hooks/useEthPrice";
 import HistoryModal from "./components/HistoryModal/HistoryModal";
 import ReferralModal from "./components/ReferralModal";
 import { useReferrals } from "./hooks/useReferrals";
+import { useStreak } from "./hooks/useStreak";
+import StreakProtectionModal from "./components/StreakProtectionModal";
 
 // Internal component for stats to keep page clean
 function PlatformStatsBanner() {
@@ -85,7 +87,9 @@ export default function Home() {
     reclaimStake,
     isReclaiming,
     prevRound,
-    prevUserStake
+    prevUserStake,
+    buyStreakProtection,
+    isProtecting
   } = useBaseFlip();
 
   const { claimableRounds, claimRound, isClaiming: isClaimingLegacy, scanForWinnings } = useAllUnclaimedWinnings();
@@ -98,6 +102,41 @@ export default function Home() {
 
   const { history, recordRoundResult } = useUserHistory();
   const { recordReferral } = useReferrals(address);
+  // Streak System
+  const streak = useStreak(address);
+  const [showProtection, setShowProtection] = useState(false);
+
+  // Monitor loss for protection modal
+  useEffect(() => {
+    // If we have a loss with a restorable streak > 0, and we haven't dismissed it
+    if (streak.streakAtLoss > 0 && streak.lastResult === 'loss') {
+      // Check if we already dismissed this round
+      const dismissedRound = localStorage.getItem('dismissedProtectionRound');
+      if (dismissedRound !== streak.lastRoundId.toString()) {
+        setShowProtection(true);
+      }
+    } else {
+      setShowProtection(false);
+    }
+  }, [streak.streakAtLoss, streak.lastResult, streak.lastRoundId]);
+
+  const handleProtectStreak = async () => {
+    if (recentLoss && streak.lastRoundId) {
+      try {
+        await buyStreakProtection(BigInt(streak.lastRoundId));
+        setShowProtection(false); // Optimistic close
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handleDismissProtection = () => {
+    setShowProtection(false);
+    if (streak.lastRoundId) {
+      localStorage.setItem('dismissedProtectionRound', streak.lastRoundId.toString());
+    }
+  };
 
   // Referral Detection
   useEffect(() => {
@@ -181,6 +220,9 @@ export default function Home() {
               isClaimed: false
             });
 
+            // Update Streak
+            streak.recordResult(Number(lastWinner.id), isWinner);
+
             // If user lost, show the loss banner temporarily
             if (!isWinner) {
               setRecentLoss({ roundId: Number(lastWinner.id), amount: formatEther(stakeAmtBn) });
@@ -254,6 +296,11 @@ export default function Home() {
           <button onClick={() => setShowReferral(true)} className={styles.leaderboardLink} style={{ color: '#00D4FF' }}>
             🤝 Invite
           </button>
+          {streak.currentStreak > 0 && (
+            <div className={styles.leaderboardLink} style={{ background: 'rgba(255, 165, 0, 0.2)', color: '#FFD700', border: '1px solid #FFD700', boxShadow: 'none' }}>
+              🔥 {streak.currentStreak}
+            </div>
+          )}
         </div>
         <p className={styles.subtitle}>The Ultimate Onchain Prediction Game • Stake. Predict. Win.</p>
         <div className={styles.walletButton}>
@@ -519,6 +566,14 @@ export default function Home() {
         isOpen={showReferral}
         onClose={() => setShowReferral(false)}
         address={address}
+      />
+
+      <StreakProtectionModal
+        isOpen={showProtection}
+        onClose={handleDismissProtection}
+        onProtect={handleProtectStreak}
+        streakLost={streak.streakAtLoss}
+        isProtecting={isProtecting}
       />
     </div>
   );
