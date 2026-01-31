@@ -199,3 +199,44 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 85, 255, 0.4);
 }
+
+@media (max-width: 480px) {
+    .modal {
+        border-radius: 20px;
+    }
+
+    .content {
+        padding: 24px 20px;
+    }
+
+    .content h2 {
+        font-size: 1.5rem;
+    }
+
+    .statsRow {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .linkContainer {
+        flex-direction: column;
+    }
+
+    .linkInput {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .copyButton {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .statCard {
+        padding: 12px;
+    }
+
+    .statValue {
+        font-size: 1.25rem;
+    }
+}
