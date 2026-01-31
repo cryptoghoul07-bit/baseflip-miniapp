@@ -276,28 +276,29 @@
   }
 
   .headerTop {
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
   .logo {
-    width: 45px;
-    height: 45px;
-  }
-
-  .gameContent {
-    gap: 20px;
+    grid-column: span 2;
+    margin: 0 auto;
+    width: 40px;
+    height: 40px;
   }
 
   .leaderboardLink {
-    padding: 8px 16px;
-    font-size: 0.8rem;
+    padding: 10px 8px;
+    font-size: 0.75rem;
     width: 100%;
     justify-content: center;
   }
 
-  .walletButton {
-    width: 100%;
+  .header {
+    padding: 16px 12px;
+    margin-bottom: 20px;
   }
 
   .connectButton {
