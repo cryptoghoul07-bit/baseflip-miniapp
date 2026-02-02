@@ -33,6 +33,7 @@ import ReferralModal from "./components/ReferralModal";
 import { useReferrals } from "./hooks/useReferrals";
 import { useStreak } from "./hooks/useStreak";
 import StreakProtectionModal from "./components/StreakProtectionModal";
+import StreakPanel from "./components/StreakPanel/StreakPanel";
 
 // Internal component for stats to keep page clean
 function PlatformStatsBanner() {
@@ -109,21 +110,21 @@ export default function Home() {
   // Monitor loss for protection modal
   useEffect(() => {
     // If we have a loss with a restorable streak > 0, and we haven't dismissed it
-    if (streak.streakAtLoss > 0 && streak.lastResult === 'loss') {
+    if (streak.streakAtLoss > 0 && streak.lastResult === 'loss' && recentLoss) {
       // Check if we already dismissed this round
       const dismissedRound = localStorage.getItem('dismissedProtectionRound');
-      if (dismissedRound !== streak.lastRoundId.toString()) {
+      if (dismissedRound !== recentLoss.roundId.toString()) {
         setShowProtection(true);
       }
     } else {
       setShowProtection(false);
     }
-  }, [streak.streakAtLoss, streak.lastResult, streak.lastRoundId]);
+  }, [streak.streakAtLoss, streak.lastResult, recentLoss]);
 
   const handleProtectStreak = async () => {
-    if (recentLoss && streak.lastRoundId) {
+    if (recentLoss) {
       try {
-        await buyStreakProtection(BigInt(streak.lastRoundId));
+        await buyStreakProtection(BigInt(recentLoss.roundId));
         setShowProtection(false); // Optimistic close
       } catch (err) {
         console.error(err);
@@ -133,8 +134,8 @@ export default function Home() {
 
   const handleDismissProtection = () => {
     setShowProtection(false);
-    if (streak.lastRoundId) {
-      localStorage.setItem('dismissedProtectionRound', streak.lastRoundId.toString());
+    if (recentLoss) {
+      localStorage.setItem('dismissedProtectionRound', recentLoss.roundId.toString());
     }
   };
 
@@ -575,6 +576,8 @@ export default function Home() {
         streakLost={streak.streakAtLoss}
         isProtecting={isProtecting}
       />
+
+      <StreakPanel />
     </div>
   );
 }

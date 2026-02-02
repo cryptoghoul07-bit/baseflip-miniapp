@@ -1,0 +1,159 @@
+.streakPanel {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-xl);
+    border: 2px solid;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    animation: slideInLeft 0.5s ease-out;
+    min-width: 180px;
+}
+
+.winStreak {
+    border-color: #FFD700;
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 165, 0, 0.1) 100%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.lossStreak {
+    border-color: #5D9CEC;
+    background: linear-gradient(135deg, rgba(93, 156, 236, 0.1) 0%, rgba(93, 93, 255, 0.1) 100%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(93, 156, 236, 0.3);
+}
+
+.streakIcon {
+    font-size: 2rem;
+    line-height: 1;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.streakInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.streakLabel {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.7;
+}
+
+.winStreak .streakLabel {
+    color: #FFD700;
+}
+
+.lossStreak .streakLabel {
+    color: #5D9CEC;
+}
+
+.streakCount {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.winStreak .streakCount {
+    color: #FFD700;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.lossStreak .streakCount {
+    color: #5D9CEC;
+    text-shadow: 0 0 10px rgba(93, 156, 236, 0.5);
+}
+
+.bestStreak {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--border-radius-md);
+    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    margin-left: 8px;
+}
+
+.bestLabel {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.bestCount {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--gold);
+    line-height: 1;
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .streakPanel {
+        left: 12px;
+        bottom: 90px;
+        /* Above the winners feed */
+        padding: 12px 16px;
+        min-width: 150px;
+        gap: 8px;
+    }
+
+    .streakIcon {
+        font-size: 1.5rem;
+    }
+
+    .streakLabel {
+        font-size: 0.6rem;
+    }
+
+    .streakCount {
+        font-size: 1.4rem;
+    }
+
+    .bestStreak {
+        padding: 6px 8px;
+    }
+
+    .bestCount {
+        font-size: 1rem;
+    }
+}
