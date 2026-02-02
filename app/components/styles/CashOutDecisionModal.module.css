@@ -230,17 +230,58 @@
 @media (max-width: 600px) {
     .buttons {
         grid-template-columns: 1fr;
+        gap: 12px;
     }
 
     .modal {
         width: 95%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .header {
+        padding: 24px 20px 16px 20px;
+    }
+
+    .content {
+        padding: 20px;
+    }
+
+    .icon {
+        font-size: 3.5rem;
+        margin-bottom: 12px;
     }
 
     .header h2 {
-        font-size: 2rem;
+        font-size: 1.8rem;
+    }
+
+    .claimBox {
+        padding: 16px;
+        margin-bottom: 16px;
     }
 
     .claimValue {
-        font-size: 2.5rem;
+        font-size: 2rem;
+    }
+
+    .warning {
+        padding: 12px;
+        margin-bottom: 20px;
+    }
+
+    .button {
+        padding: 16px;
+        flex-direction: row;
+        justify-content: center;
+        text-align: left;
+    }
+
+    .buttonIcon {
+        font-size: 1.8rem;
+    }
+
+    .buttonText {
+        text-align: left;
     }
 }
