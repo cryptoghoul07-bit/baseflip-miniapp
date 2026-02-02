@@ -1,0 +1,246 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(20px);
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal {
+    background: linear-gradient(135deg, rgba(20, 20, 40, 0.98) 0%, rgba(0, 0, 0, 0.98) 100%);
+    border: 2px solid var(--gold);
+    border-radius: var(--border-radius-xl);
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(255, 215, 0, 0.3);
+    animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.header {
+    text-align: center;
+    padding: 40px 32px 24px 32px;
+    border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.icon {
+    font-size: 5rem;
+    margin-bottom: 16px;
+    animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.header h2 {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 900;
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.rounds {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.content {
+    padding: 32px;
+}
+
+.claimBox {
+    text-align: center;
+    padding: 24px;
+    background: rgba(255, 215, 0, 0.05);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: var(--border-radius-lg);
+    margin-bottom: 24px;
+}
+
+.claimLabel {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.claimValue {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--gold);
+    margin-bottom: 12px;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.claimSubtext {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.warning {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(200, 0, 0, 0.05) 100%);
+    border: 2px solid rgba(255, 0, 0, 0.3);
+    border-radius: var(--border-radius-lg);
+    padding: 20px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.warningIcon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.warningText {
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+.highlight {
+    color: #ff4444;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.button {
+    padding: 24px 20px;
+    border-radius: var(--border-radius-lg);
+    border: 3px solid;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.cashOutButton {
+    background: linear-gradient(135deg, rgba(0, 255, 0, 0.1) 0%, rgba(0, 200, 0, 0.05) 100%);
+    border-color: #00ff00;
+}
+
+.cashOutButton:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(0, 255, 0, 0.2) 0%, rgba(0, 200, 0, 0.1) 100%);
+    box-shadow: 0 8px 32px rgba(0, 255, 0, 0.4);
+    transform: translateY(-4px);
+}
+
+.continueButton {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(200, 0, 0, 0.05) 100%);
+    border-color: #ff0000;
+}
+
+.continueButton:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.2) 0%, rgba(200, 0, 0, 0.1) 100%);
+    box-shadow: 0 8px 32px rgba(255, 0, 0, 0.4);
+    transform: translateY(-4px);
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.buttonIcon {
+    font-size: 2.5rem;
+}
+
+.buttonText {
+    text-align: center;
+}
+
+.buttonLabel {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.buttonValue {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.autoMessage {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.autoMessage strong {
+    color: var(--neon-cyan);
+    font-weight: 800;
+}
+
+@media (max-width: 600px) {
+    .buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .modal {
+        width: 95%;
+    }
+
+    .header h2 {
+        font-size: 2rem;
+    }
+
+    .claimValue {
+        font-size: 2.5rem;
+    }
+}
