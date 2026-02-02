@@ -2,11 +2,14 @@ import { useState, useCallback, useEffect } from 'react';
 import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther } from 'viem';
 import BaseFlipABI from '../lib/BaseFlipABI.json';
+import CashOutOrDieABI from '../lib/CashOutOrDieABI.json';
 
-const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
+const BASEFLIP_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
+const CASHOUT_ADDRESS = (process.env.NEXT_PUBLIC_CASHOUTORDIE_CONTRACT_ADDRESS || '0x0') as `0x${string}`;
 
 export interface HistoryItem {
     roundId: number;
+    gameType: 'classic' | 'cashout';
     amount: string; // The primary display amount (Payout for won, Stake for lost/pending)
     stakeAmount: string; // Original bet
     group: number;
@@ -27,121 +30,149 @@ export function useUserHistory() {
     // KEY IMPROVEMENT: Persistent "Rounds Log" in localStorage
     const getLocalLog = useCallback((): HistoryItem[] => {
         if (typeof window === 'undefined' || !address) return [];
-        const saved = localStorage.getItem(`baseflip_history_${address}`);
+        const saved = localStorage.getItem(`baseflip_history_v2_${address}`);
         return saved ? JSON.parse(saved) : [];
     }, [address]);
 
     const saveLocalLog = useCallback((items: HistoryItem[]) => {
         if (typeof window === 'undefined' || !address) return;
-        localStorage.setItem(`baseflip_history_${address}`, JSON.stringify(items));
+        localStorage.setItem(`baseflip_history_v2_${address}`, JSON.stringify(items));
     }, [address]);
 
-    /**
-     * Public method to capture a round result into the local log.
-     * This should be called when a round completes.
-     */
     const recordRoundResult = useCallback((item: HistoryItem) => {
         if (!address) return;
         const currentLog = getLocalLog();
-        // Avoid duplicates
-        if (!currentLog.find(l => l.roundId === item.roundId)) {
-            const newLog = [item, ...currentLog].sort((a, b) => b.roundId - a.roundId);
+        // Avoid duplicates (using combination of type and id)
+        if (!currentLog.find(l => l.roundId === item.roundId && l.gameType === item.gameType)) {
+            const newLog = [item, ...currentLog].sort((a, b) => b.timestamp - a.timestamp);
             saveLocalLog(newLog);
             setHistory(newLog);
         }
     }, [address, getLocalLog, saveLocalLog]);
 
     const syncWithBlockchain = useCallback(async () => {
-        if (!address || !publicClient || !CONTRACT_ADDRESS) return;
+        if (!address || !publicClient) return;
 
         setIsLoading(true);
         try {
             const currentLog = getLocalLog();
-            const currentIdBn = await publicClient.readContract({
-                address: CONTRACT_ADDRESS,
+
+            // --- Sync Classic ---
+            const classicIdBn = await publicClient.readContract({
+                address: BASEFLIP_ADDRESS,
                 abi: BaseFlipABI,
                 functionName: 'currentRoundId'
             }) as bigint;
-            const currentId = Number(currentIdBn);
+            const classicId = Number(classicIdBn);
 
-            // Scan last 50 rounds, but skip ones we already have accurate persistent data for
-            const roundsToScan = Array.from({ length: Math.min(currentId, 50) }, (_, i) => currentId - i)
-                .filter(id => id > 0 && !currentLog.find(l => l.roundId === id && l.isCompleted));
+            const classicRoundsToScan = Array.from({ length: Math.min(classicId, 30) }, (_, i) => classicId - i)
+                .filter(id => id > 0 && !currentLog.find(l => l.roundId === id && l.gameType === 'classic' && l.isCompleted));
 
-            if (roundsToScan.length === 0) {
-                setHistory(currentLog);
-                setIsLoading(false);
-                return;
-            }
+            const classicItems: HistoryItem[] = [];
+            if (classicRoundsToScan.length > 0) {
+                const classicContracts: any[] = [];
+                classicRoundsToScan.forEach(id => {
+                    classicContracts.push({ address: BASEFLIP_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [BigInt(id)] });
+                    classicContracts.push({ address: BASEFLIP_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
+                });
 
-            const contracts: any[] = [];
-            roundsToScan.forEach(id => {
-                contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'rounds', args: [BigInt(id)] });
-                contracts.push({ address: CONTRACT_ADDRESS, abi: BaseFlipABI, functionName: 'userStakes', args: [BigInt(id), address] });
-            });
+                const classicRes = await publicClient.multicall({ contracts: classicContracts as any, allowFailure: true });
 
-            const results = await publicClient.multicall({
-                contracts: contracts as any,
-                allowFailure: true
-            });
+                for (let i = 0; i < classicRoundsToScan.length; i++) {
+                    const rid = classicRoundsToScan[i];
+                    const r = classicRes[i * 2]?.result as any;
+                    const s = classicRes[i * 2 + 1]?.result as any;
 
-            const discoveredItems: HistoryItem[] = [];
+                    if (r && s) {
+                        const group = Number(Array.isArray(s) ? s[1] : s.group);
+                        if (group === 0) continue;
 
-            for (let i = 0; i < roundsToScan.length; i++) {
-                const rid = roundsToScan[i];
-                const rRes = results[i * 2];
-                const sRes = results[i * 2 + 1];
+                        const stakeAmtBn = (Array.isArray(s) ? s[0] : s.amount) as bigint;
+                        const isCompleted = Array.isArray(r) ? r[6] : r.isCompleted;
+                        const isCancelled = Array.isArray(r) ? r[7] : r.isCancelled;
+                        const winningGroup = Number(Array.isArray(r) ? r[8] : r.winningGroup);
+                        const createdAt = Number(Array.isArray(r) ? r[4] : r.createdAt);
+                        const isWinner = isCompleted && !isCancelled && winningGroup === group;
 
-                if (rRes?.status === 'success' && sRes?.status === 'success') {
-                    const r = rRes.result as any;
-                    const s = sRes.result as any;
-                    const isRArr = Array.isArray(r);
-                    const isSArr = Array.isArray(s);
-
-                    const group = Number(isSArr ? s[1] : s.group);
-                    if (group === 0) continue;
-
-                    const stakeAmtBn = (isSArr ? s[0] : s.amount) as bigint;
-                    const isCompleted = isRArr ? r[6] : (r as any).isCompleted;
-                    const isCancelled = isRArr ? r[7] : (r as any).isCancelled;
-                    const winningGroup = Number(isRArr ? r[8] : (r as any).winningGroup);
-                    const createdAt = Number(isRArr ? r[4] : (r as any).createdAt);
-
-                    const poolA = isRArr ? r[1] : (r as any).poolA;
-                    const poolB = isRArr ? r[2] : (r as any).poolB;
-
-                    const isWinner = isCompleted && !isCancelled && winningGroup === group;
-
-                    let displayAmt = formatEther(stakeAmtBn);
-                    if (isWinner) {
-                        const winningPool = winningGroup === 1 ? poolA : poolB;
-                        const losingPool = winningGroup === 1 ? poolB : poolA;
-                        if (winningPool > 0n) {
-                            const payoutPool = (BigInt(losingPool) * 99n) / 100n;
-                            const share = (stakeAmtBn * payoutPool) / BigInt(winningPool);
-                            displayAmt = formatEther(stakeAmtBn + share);
-                        }
+                        classicItems.push({
+                            roundId: rid,
+                            gameType: 'classic',
+                            amount: formatEther(isWinner ? (stakeAmtBn * 195n) / 100n : stakeAmtBn), // approx
+                            stakeAmount: formatEther(stakeAmtBn),
+                            group,
+                            winningGroup,
+                            isCompleted,
+                            isCancelled,
+                            isWinner,
+                            timestamp: createdAt,
+                            isClaimed: isCompleted && isWinner && stakeAmtBn === 0n
+                        });
                     }
-
-                    discoveredItems.push({
-                        roundId: rid,
-                        amount: displayAmt,
-                        stakeAmount: formatEther(stakeAmtBn > 0n ? stakeAmtBn : 1000000000000000n),
-                        group,
-                        winningGroup,
-                        isCompleted,
-                        isCancelled,
-                        isWinner,
-                        timestamp: createdAt,
-                        isClaimed: isCompleted && isWinner && stakeAmtBn === 0n
-                    });
                 }
             }
 
-            // Merge discovered with local log and persist
-            const merged = [...discoveredItems, ...currentLog]
-                .filter((v, i, a) => a.findIndex(t => t.roundId === v.roundId) === i)
-                .sort((a, b) => b.roundId - a.roundId);
+            // --- Sync CashOutOrDie ---
+            const cashoutItems: HistoryItem[] = [];
+            if (CASHOUT_ADDRESS !== '0x0') {
+                const cashoutIdBn = await publicClient.readContract({
+                    address: CASHOUT_ADDRESS,
+                    abi: CashOutOrDieABI,
+                    functionName: 'currentGameId'
+                }) as bigint;
+                const cashoutId = Number(cashoutIdBn);
+
+                const coRoundsToScan = Array.from({ length: Math.min(cashoutId, 30) }, (_, i) => cashoutId - i)
+                    .filter(id => id > 0 && !currentLog.find(l => l.roundId === id && l.gameType === 'cashout' && l.isCompleted));
+
+                if (coRoundsToScan.length > 0) {
+                    const coContracts: any[] = [];
+                    coRoundsToScan.forEach(id => {
+                        coContracts.push({ address: CASHOUT_ADDRESS, abi: CashOutOrDieABI, functionName: 'games', args: [BigInt(id)] });
+                        coContracts.push({ address: CASHOUT_ADDRESS, abi: CashOutOrDieABI, functionName: 'getPlayerStats', args: [BigInt(id), address] });
+                    });
+
+                    const coRes = await publicClient.multicall({ contracts: coContracts as any, allowFailure: true });
+
+                    for (let i = 0; i < coRoundsToScan.length; i++) {
+                        const gid = coRoundsToScan[i];
+                        const g = coRes[i * 2]?.result as any;
+                        const p = coRes[i * 2 + 1]?.result as any;
+
+                        if (g && p) {
+                            const group = Number(p[1]);
+                            if (group === 0) continue;
+
+                            const entryFeeAmt = g[0] as bigint;
+                            const claimValue = p[0] as bigint;
+                            const isCompleted = g[5] as boolean;
+                            const hasCashedOut = p[3] as boolean;
+                            const isAlive = p[2] as boolean;
+                            const startTime = Number(g[3]);
+
+                            const isWinner = hasCashedOut || (!isAlive && claimValue > 0n) || (isCompleted && isAlive);
+                            const displayAmt = claimValue > 0n ? formatEther(claimValue) : formatEther(entryFeeAmt);
+
+                            cashoutItems.push({
+                                roundId: gid,
+                                gameType: 'cashout',
+                                amount: displayAmt,
+                                stakeAmount: formatEther(entryFeeAmt),
+                                group,
+                                winningGroup: 0, // Not applicable globally
+                                isCompleted,
+                                isWinner,
+                                timestamp: startTime,
+                                isClaimed: hasCashedOut || (isCompleted && isAlive && claimValue > 0n)
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Merge everything
+            const merged = [...classicItems, ...cashoutItems, ...currentLog]
+                .filter((v, i, a) => a.findIndex(t => t.roundId === v.roundId && t.gameType === v.gameType) === i)
+                .sort((a, b) => b.timestamp - a.timestamp);
 
             saveLocalLog(merged);
             setHistory(merged);
@@ -156,14 +187,8 @@ export function useUserHistory() {
 
     useEffect(() => {
         if (address) {
-            // Delay initial sync to prevent blocking the UI during wallet connection/init
-            const timer = setTimeout(() => {
-                syncWithBlockchain();
-            }, 2000); // Changed delay to 2000ms
-
-            // Also add an interval for periodic refetching
-            const interval = setInterval(syncWithBlockchain, 60000); // Refetch every 60 seconds
-
+            const timer = setTimeout(syncWithBlockchain, 1000);
+            const interval = setInterval(syncWithBlockchain, 60000);
             return () => {
                 clearTimeout(timer);
                 clearInterval(interval);

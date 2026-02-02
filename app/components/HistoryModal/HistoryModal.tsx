@@ -28,7 +28,7 @@ export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
                     ) : (
                         <div className={styles.list}>
                             {history.map((item) => (
-                                <HistoryRow key={item.roundId} item={item} />
+                                <HistoryRow key={`${item.gameType}-${item.roundId}`} item={item} />
                             ))}
                         </div>
                     )}
@@ -44,6 +44,13 @@ function HistoryRow({ item }: { item: HistoryItem }) {
     return (
         <div className={`${styles.row} ${isPending ? styles.pending : item.isWinner ? styles.won : styles.lost}`}>
             <div className={styles.rowLeft}>
+                <div className={styles.modeBadge} style={{
+                    background: item.gameType === 'cashout' ? 'rgba(255, 68, 68, 0.1)' : 'rgba(0, 212, 255, 0.1)',
+                    color: item.gameType === 'cashout' ? '#FF4444' : '#00D4FF',
+                    border: `1px solid ${item.gameType === 'cashout' ? 'rgba(255, 68, 68, 0.2)' : 'rgba(0, 212, 255, 0.2)'}`
+                }}>
+                    {item.gameType === 'cashout' ? 'CASHOUT' : 'CLASSIC'}
+                </div>
                 <span className={styles.roundId}>#{item.roundId}</span>
                 <span className={styles.timestamp}>
                     {new Date(item.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -58,9 +65,12 @@ function HistoryRow({ item }: { item: HistoryItem }) {
                     {Number(item.amount).toFixed(4)} ETH
                 </span>
                 <span className={item.group === 1 ? styles.groupA : styles.groupB}>
-                    on {item.group === 1 ? 'Pool A (Blue)' : 'Pool B (Red)'}
+                    {item.gameType === 'classic' ?
+                        `on ${item.group === 1 ? 'Pool A (Blue)' : 'Pool B (Red)'}` :
+                        `Joined Group ${item.group}`
+                    }
                 </span>
-                {item.isWinner && (
+                {item.isWinner && item.gameType === 'classic' && (
                     <div style={{ display: 'flex', gap: '8px', marginTop: '2px' }}>
                         <span className={styles.stakeBasis}>Bet: {Number(item.stakeAmount).toFixed(4)}</span>
                         <span style={{ fontSize: '0.65rem', color: '#00FF88', fontWeight: 600 }}>
