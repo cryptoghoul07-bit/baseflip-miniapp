@@ -91,7 +91,8 @@ export function useLeaderboard() {
                     const group = Number(log.args.group);
                     const stakeAmt = log.args.amount as bigint;
                     const totalVolume = pools.a + pools.b;
-                    const roundBasePoints = Number((totalVolume * 1000n) / BigInt(1e18));
+                    // anti-farming: cap volume-based points at 100 per round (equivalent to 0.1 ETH)
+                    const roundBasePoints = Math.min(Number((totalVolume * 1000n) / BigInt(1e18)), 100);
                     const sidePool = group === 1 ? pools.a : pools.b;
                     if (sidePool > 0n) {
                         const awarded = Math.round((Number(stakeAmt) / Number(sidePool)) * (roundBasePoints * (group === winner ? 0.8 : 0.2)));
