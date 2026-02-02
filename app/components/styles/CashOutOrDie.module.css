@@ -333,17 +333,6 @@
     .mainContent {
         padding: 24px;
     }
-
-    .outcomeTitle {
-        font-size: 2.5rem;
-        letter-spacing: 4px;
-        margin-bottom: 12px;
-    }
-
-    .outcomeIcon {
-        font-size: 5rem;
-        margin-bottom: 16px;
-    }
 }
 
 /* Outcome Overlays */
@@ -516,5 +505,26 @@
 
     50% {
         transform: translateY(-10px);
+    }
+}
+
+/* Mobile Outcome Overrides - Must be at bottom to override defaults */
+@media (max-width: 768px) {
+    .outcomeTitle {
+        font-size: 2.5rem !important;
+        letter-spacing: 4px;
+        margin-bottom: 12px;
+        padding: 0 10px;
+        text-align: center;
+        word-wrap: break-word;
+    }
+
+    .outcomeIcon {
+        font-size: 5rem !important;
+        margin-bottom: 16px;
+    }
+
+    .outcomeOverlay {
+        padding: 20px;
     }
 }
