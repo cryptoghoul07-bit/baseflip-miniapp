@@ -143,6 +143,8 @@ export default function AdminPanel() {
             {hash && <div className={styles.txHash}>Tx: {hash.slice(0, 8)}...{hash.slice(-6)}</div>}
 
             <AutoWinnerControl />
+
+            <CashOutOrDieAdmin />
         </div>
     );
 }
