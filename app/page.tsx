@@ -306,9 +306,11 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div className={styles.headerTop}>
+        <div className={styles.headerBrand}>
           <img src="/logo.png" alt="BaseFlip" className={styles.logo} />
           <h1 className={styles.title}>BaseFlip</h1>
+        </div>
+        <div className={styles.headerNav}>
           <button onClick={() => window.location.href = '/leaderboard'} className={styles.leaderboardLink}>
             👑 Leaderboard
           </button>

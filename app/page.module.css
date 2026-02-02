@@ -20,11 +20,19 @@
 
 /* Removed header::before blue line to prevent flicker glitch on mobile */
 
-.headerTop {
+.headerBrand {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.headerNav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 16px;
 }
@@ -275,7 +283,11 @@
     letter-spacing: 1px;
   }
 
-  .headerTop {
+  .headerBrand {
+    margin-bottom: 12px;
+  }
+
+  .headerNav {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
@@ -283,8 +295,7 @@
   }
 
   .logo {
-    grid-column: span 2;
-    margin: 0 auto;
+    margin: 0;
     width: 40px;
     height: 40px;
   }
