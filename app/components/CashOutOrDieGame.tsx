@@ -201,7 +201,7 @@ export default function CashOutOrDieGame() {
                             <div className={styles.statusText}>
                                 <div className={styles.statusTitle}>ELIMINATED</div>
                                 <div className={styles.statusDesc}>
-                                    You survived {playerState.roundsWon.toString()} rounds
+                                    You survived {playerState?.roundsWon?.toString() ?? '0'} rounds
                                 </div>
                             </div>
                         </>
@@ -211,7 +211,7 @@ export default function CashOutOrDieGame() {
                             <div className={styles.statusText}>
                                 <div className={styles.statusTitle}>CASHED OUT</div>
                                 <div className={styles.statusDesc}>
-                                    Smart move! You survived {playerState.roundsWon.toString()} rounds
+                                    Smart move! You survived {playerState?.roundsWon?.toString() ?? '0'} rounds
                                 </div>
                             </div>
                         </>
@@ -221,7 +221,7 @@ export default function CashOutOrDieGame() {
                             <div className={styles.statusText}>
                                 <div className={styles.statusTitle}>ALIVE</div>
                                 <div className={styles.statusDesc}>
-                                    Current Claim: {formatEther(playerState.claimValue)} ETH
+                                    Current Claim: {formatEther(playerState?.claimValue ?? 0n)} ETH
                                 </div>
                             </div>
                         </>
@@ -272,12 +272,12 @@ export default function CashOutOrDieGame() {
                             Make your prediction. Win or lose it all.
                         </div>
 
-                        {playerState.hasSubmittedChoice ? (
+                        {playerState?.hasSubmittedChoice ? (
                             <div className={styles.waitingState}>
                                 <div className={styles.waitingIcon}>⏳</div>
                                 <div>Waiting for round to complete...</div>
                                 <div className={styles.yourChoice}>
-                                    Your choice: <strong>Group {playerState.currentChoice === 1 ? 'A' : 'B'}</strong>
+                                    Your choice: <strong>Group {playerState?.currentChoice === 1 ? 'A' : 'B'}</strong>
                                 </div>
                             </div>
                         ) : (
