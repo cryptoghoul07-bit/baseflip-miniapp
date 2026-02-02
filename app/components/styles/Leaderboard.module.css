@@ -220,7 +220,7 @@
 
 /* Rules Section Styles */
 .rulesSection {
-    margin-top: 48px;
+    margin-top: 24px;
     padding: 32px;
     background: var(--bg-card);
     border: 1px solid var(--border-glow);
