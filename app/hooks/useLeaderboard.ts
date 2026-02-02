@@ -32,31 +32,40 @@ export function useLeaderboard() {
                 transport: http(RPC_URL),
             });
 
-            console.log(`[useLeaderboard] Starting Multi-Contract Audit...`);
+            console.log(`[useLeaderboard] Starting High-Fidelity Multi-Contract Audit...`);
 
-            // 1. Get Top Players from both contracts if possible (or just use one as primary)
-            const baseflipLeaderboard = await publicClient.readContract({
+            // 1. Get Top Players from BaseFlip (System of Record)
+            const onChainData = await publicClient.readContract({
                 address: BASEFLIP_ADDRESS,
                 abi: BaseFlipABI,
                 functionName: 'getLeaderboardTop',
                 args: [100n]
             }).catch(() => null) as unknown as [string[], bigint[]] | null;
 
-            const topAddressesSet = new Set<string>();
-            if (baseflipLeaderboard?.[0]) {
-                baseflipLeaderboard[0].forEach(a => {
-                    if (a !== '0x0000000000000000000000000000000000000000') topAddressesSet.add(a.toLowerCase());
-                });
+            if (!onChainData || !onChainData[0]) {
+                throw new Error("Could not fetch player list");
             }
-            if (currentUserAddress) topAddressesSet.add(currentUserAddress.toLowerCase());
 
-            const topAddresses = Array.from(topAddressesSet);
+            const topAddresses = onChainData[0].filter(a => a !== '0x0000000000000000000000000000000000000000');
+            if (currentUserAddress && !topAddresses.includes(currentUserAddress)) {
+                topAddresses.push(currentUserAddress);
+            }
 
-            // 2. Scan History
+            const pointsMap = new Map<string, number>();
+
+            // --- ANTI-FARMING: Normalize historical farmed points (30% value) ---
+            onChainData[0].forEach((addr, i) => {
+                if (addr !== '0x0000000000000000000000000000000000000000') {
+                    const farmedPoints = Number(onChainData[1][i]);
+                    pointsMap.set(addr.toLowerCase(), Math.floor(farmedPoints * 0.3));
+                }
+            });
+
+            // 2. Scan Recent History (Deep Audit)
             const latestBlock = await publicClient.getBlockNumber();
             const fromBlock = latestBlock > 500000n ? latestBlock - 500000n : 0n;
 
-            // --- Fetch BaseFlip Logs ---
+            // --- BaseFlip Scanning ---
             const stakeEvent = BaseFlipABI.find(x => x.name === 'StakePlaced');
             const winnerEvent = BaseFlipABI.find(x => x.name === 'WinnerDeclared');
             const startedEvent = BaseFlipABI.find(x => x.name === 'RoundStarted');
@@ -67,31 +76,12 @@ export function useLeaderboard() {
                 publicClient.getLogs({ address: BASEFLIP_ADDRESS, event: startedEvent as any, fromBlock: fromBlock }).catch(() => [])
             ]);
 
-            // --- Fetch CashOutOrDie Logs ---
-            let coJoinedLogs: any[] = [];
-            let coRoundLogs: any[] = [];
-            let coCompletedLogs: any[] = [];
-
-            if (CASHOUT_ADDRESS !== '0x0') {
-                const coJoinedEvent = CashOutOrDieABI.find(x => x.name === 'PlayerJoined');
-                const coRoundEvent = CashOutOrDieABI.find(x => x.name === 'RoundCompleted');
-                const coCompletedEvent = CashOutOrDieABI.find(x => x.name === 'GameCompleted');
-
-                [coJoinedLogs, coRoundLogs, coCompletedLogs] = await Promise.all([
-                    publicClient.getLogs({ address: CASHOUT_ADDRESS, event: coJoinedEvent as any, fromBlock: fromBlock }).catch(() => []),
-                    publicClient.getLogs({ address: CASHOUT_ADDRESS, event: coRoundEvent as any, fromBlock: fromBlock }).catch(() => []),
-                    publicClient.getLogs({ address: CASHOUT_ADDRESS, event: coCompletedEvent as any, fromBlock: fromBlock }).catch(() => [])
-                ]);
-            }
-
-            const pointsMap = new Map<string, number>();
-
-            // 3. Calculate Classic Points (80/20 Model)
             const classicWinners = new Map<number, number>();
             winnerLogs.forEach((l: any) => classicWinners.set(Number(l.args.roundId), Number(l.args.winningGroup)));
             const classicPools = new Map<number, { a: bigint, b: bigint }>();
             startedLogs.forEach((l: any) => classicPools.set(Number(l.args.roundId), { a: l.args.poolA, b: l.args.poolB }));
 
+            // 3. Add Classic Points (Real-time Audit)
             stakeLogs.forEach((log: any) => {
                 const user = log.args.user.toLowerCase();
                 const rid = Number(log.args.roundId);
@@ -110,29 +100,69 @@ export function useLeaderboard() {
                 }
             });
 
-            // 4. Calculate Cash-Out or Die Points
-            // Award: 20 points for joining, 50 points per round win, 100 points for game victory
-            coJoinedLogs.forEach((log: any) => {
-                const user = log.args.player.toLowerCase();
-                pointsMap.set(user, (pointsMap.get(user) || 0) + 20); // Base participation
-            });
+            // 4. Add Cash-Out or Die Points
+            if (CASHOUT_ADDRESS !== '0x0') {
+                const coJoinedEvent = CashOutOrDieABI.find(x => x.name === 'PlayerJoined');
+                const coCompletedEvent = CashOutOrDieABI.find(x => x.name === 'GameCompleted');
 
-            // Round wins (we need to track who was in which group each round)
-            // Simplified: give points to players based on RoundCompleted winningGroup
-            // Real audit would check player choices, but for leaderboard speed let's award participation in rounds
-            coRoundLogs.forEach((log: any) => {
-                // Anyone who was in that game at that round gets some baseline "survival" points
-                // (More detailed audit can be added later)
-            });
+                const [coJoinedLogs, coCompletedLogs] = await Promise.all([
+                    publicClient.getLogs({ address: CASHOUT_ADDRESS, event: coJoinedEvent as any, fromBlock: fromBlock }).catch(() => []),
+                    publicClient.getLogs({ address: CASHOUT_ADDRESS, event: coCompletedEvent as any, fromBlock: fromBlock }).catch(() => [])
+                ]);
 
-            coCompletedLogs.forEach((log: any) => {
-                const winner = log.args.winner.toLowerCase();
-                if (winner !== '0x0000000000000000000000000000000000000000') {
-                    pointsMap.set(winner, (pointsMap.get(winner) || 0) + 100); // Massive win bonus
+                coJoinedLogs.forEach((log: any) => {
+                    const user = log.args.player.toLowerCase();
+                    pointsMap.set(user, (pointsMap.get(user) || 0) + 20); // Base participation
+                });
+
+                coCompletedLogs.forEach((log: any) => {
+                    const winner = log.args.winner.toLowerCase();
+                    if (winner !== '0x0000000000000000000000000000000000000000') {
+                        pointsMap.set(winner, (pointsMap.get(winner) || 0) + 100); // 100 point Victory Bonus
+                    }
+                });
+            }
+
+            // 5. Add Referral Points (Off-chain with Anti-Sybil Filtering)
+            try {
+                const refRes = await fetch('/api/referrals?raw=true');
+                const refData = await refRes.json();
+                if (refData.referrals) {
+                    Object.entries(refData.referrals).forEach(([referrer, referees]) => {
+                        const lowReferrer = referrer.toLowerCase();
+                        const qualifiedReferees = (referees as string[]).filter(referee => {
+                            const lowReferee = referee.toLowerCase();
+                            // RULE: Referee must have earned at least 1 REAL point from playing
+                            return (pointsMap.get(lowReferee) || 0) > 0;
+                        });
+
+                        if (qualifiedReferees.length > 0) {
+                            const bonusPoints = qualifiedReferees.length * 5; // 5 points per active referee
+                            pointsMap.set(lowReferrer, (pointsMap.get(lowReferrer) || 0) + bonusPoints);
+                        }
+                    });
                 }
-            });
+            } catch (refErr) {
+                console.warn('[Leaderboard] Referral audit failed:', refErr);
+            }
 
-            // 5. Build final sorted list
+            // 6. Add Streak Bonus Points (Off-chain)
+            try {
+                const streakRes = await fetch('/api/streaks?all=true');
+                const streakData = await streakRes.json();
+                if (streakData) {
+                    Object.entries(streakData).forEach(([addr, data]: [string, any]) => {
+                        const lowAddr = addr.toLowerCase();
+                        if (data.totalBonusPoints > 0) {
+                            pointsMap.set(lowAddr, (pointsMap.get(lowAddr) || 0) + data.totalBonusPoints);
+                        }
+                    });
+                }
+            } catch (streakErr) {
+                console.warn('[Leaderboard] Streak audit failed:', streakErr);
+            }
+
+            // 7. Sort and Format
             const sortedEntries: LeaderboardEntry[] = Array.from(pointsMap.entries())
                 .map(([addr, pts]) => ({ address: addr, points: pts, rank: 0 }))
                 .sort((a, b) => b.points - a.points)
