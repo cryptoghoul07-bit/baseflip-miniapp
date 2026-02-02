@@ -234,8 +234,8 @@ contract CashOutOrDie is Ownable, ReentrancyGuard {
         
         emit RoundCompleted(_gameId, game.currentRound, _winningGroup, eliminatedCount);
         
-        // Check if game should end (only one player left)
-        if (game.activePlayerCount == 1) {
+        // Check if game should end (only one player left or everyone eliminated)
+        if (game.activePlayerCount <= 1) {
             _endGame(_gameId);
         } else {
             game.currentRound++;
