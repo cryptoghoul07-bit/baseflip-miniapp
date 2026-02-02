@@ -135,214 +135,219 @@ export default function CashOutOrDieGame() {
         );
     }
 
-    const hasJoined = playerState && playerState.claimValue > 0n;
-    const isEliminated = playerState && !playerState.isAlive;
-    const hasCashedOut = playerState && playerState.hasCashedOut;
+}
 
-    return (
-        <div className={styles.container}>
-            {/* Outcome Overlays */}
-            {outcome === 'eliminated' && (
-                <div className={`${styles.outcomeOverlay} ${styles.eliminatedOverlay}`}>
-                    <div className={styles.outcomeIcon + ' ' + styles.shakingIcon}>💀</div>
-                    <div className={`${styles.outcomeTitle} ${styles.eliminatedTitle}`}>Eliminated</div>
-                </div>
-            )}
-            {outcome === 'survival' && (
-                <div className={`${styles.outcomeOverlay} ${styles.survivalOverlay}`}>
-                    <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>🛡️</div>
-                    <div className={`${styles.outcomeTitle} ${styles.survivalTitle}`}>Survived</div>
-                </div>
-            )}
-            {outcome === 'victory' && (
-                <div className={`${styles.outcomeOverlay} ${styles.victoryOverlay}`}>
-                    <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>👑</div>
-                    <div className={`${styles.outcomeTitle} ${styles.victoryTitle}`}>Victory</div>
-                </div>
-            )}
-            {outcome === 'cashedOut' && (
-                <div className={`${styles.outcomeOverlay} ${styles.cashedOutOverlay}`}>
-                    <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>💰</div>
-                    <div className={`${styles.outcomeTitle} ${styles.cashedOutTitle}`}>Cashed Out</div>
-                </div>
-            )}
+// Check if user is in the players list effectively
+const isParticipating = address && players.some(p => p.toLowerCase() === address.toLowerCase());
+const hasJoined = isParticipating || (playerState && playerState.claimValue > 0n);
 
-            {/* Header Stats */}
-            <div className={styles.header}>
-                <div className={styles.statBox}>
-                    <div className={styles.statLabel}>Total Pool</div>
-                    <div className={styles.statValue}>
-                        {formatEther(gameState.totalPool)} ETH
-                    </div>
-                </div>
-                <div className={styles.statBox}>
-                    <div className={styles.statLabel}>Players Alive</div>
-                    <div className={styles.statValue}>
-                        {gameState.activePlayerCount.toString()}
-                    </div>
-                </div>
-                <div className={styles.statBox}>
-                    <div className={styles.statLabel}>Current Round</div>
-                    <div className={styles.statValue}>
-                        {gameState.currentRound.toString()}
-                    </div>
+const isEliminated = playerState && !playerState.isAlive && hasJoined && !playerState.hasCashedOut;
+const hasCashedOut = playerState && playerState.hasCashedOut;
+
+return (
+    <div className={styles.container}>
+        {/* Outcome Overlays */}
+        {outcome === 'eliminated' && (
+            <div className={`${styles.outcomeOverlay} ${styles.eliminatedOverlay}`}>
+                <div className={styles.outcomeIcon + ' ' + styles.shakingIcon}>💀</div>
+                <div className={`${styles.outcomeTitle} ${styles.eliminatedTitle}`}>Eliminated</div>
+            </div>
+        )}
+        {outcome === 'survival' && (
+            <div className={`${styles.outcomeOverlay} ${styles.survivalOverlay}`}>
+                <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>🛡️</div>
+                <div className={`${styles.outcomeTitle} ${styles.survivalTitle}`}>Survived</div>
+            </div>
+        )}
+        {outcome === 'victory' && (
+            <div className={`${styles.outcomeOverlay} ${styles.victoryOverlay}`}>
+                <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>👑</div>
+                <div className={`${styles.outcomeTitle} ${styles.victoryTitle}`}>Victory</div>
+            </div>
+        )}
+        {outcome === 'cashedOut' && (
+            <div className={`${styles.outcomeOverlay} ${styles.cashedOutOverlay}`}>
+                <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>💰</div>
+                <div className={`${styles.outcomeTitle} ${styles.cashedOutTitle}`}>Cashed Out</div>
+            </div>
+        )}
+
+        {/* Header Stats */}
+        <div className={styles.header}>
+            <div className={styles.statBox}>
+                <div className={styles.statLabel}>Total Pool</div>
+                <div className={styles.statValue}>
+                    {formatEther(gameState.totalPool)} ETH
                 </div>
             </div>
+            <div className={styles.statBox}>
+                <div className={styles.statLabel}>Players Alive</div>
+                <div className={styles.statValue}>
+                    {gameState.activePlayerCount.toString()}
+                </div>
+            </div>
+            <div className={styles.statBox}>
+                <div className={styles.statLabel}>Current Round</div>
+                <div className={styles.statValue}>
+                    {gameState.currentRound.toString()}
+                </div>
+            </div>
+        </div>
 
-            {/* Player Status */}
-            {hasJoined && (
-                <div className={`${styles.playerStatus} ${isEliminated ? styles.eliminated : styles.alive}`}>
-                    {isEliminated ? (
-                        <>
-                            <div className={styles.statusIcon}>💀</div>
-                            <div className={styles.statusText}>
-                                <div className={styles.statusTitle}>ELIMINATED</div>
-                                <div className={styles.statusDesc}>
-                                    You survived {playerState.roundsWon.toString()} rounds
-                                </div>
+        {/* Player Status */}
+        {hasJoined && (
+            <div className={`${styles.playerStatus} ${isEliminated ? styles.eliminated : styles.alive}`}>
+                {isEliminated ? (
+                    <>
+                        <div className={styles.statusIcon}>💀</div>
+                        <div className={styles.statusText}>
+                            <div className={styles.statusTitle}>ELIMINATED</div>
+                            <div className={styles.statusDesc}>
+                                You survived {playerState.roundsWon.toString()} rounds
                             </div>
-                        </>
-                    ) : hasCashedOut ? (
-                        <>
-                            <div className={styles.statusIcon}>💰</div>
-                            <div className={styles.statusText}>
-                                <div className={styles.statusTitle}>CASHED OUT</div>
-                                <div className={styles.statusDesc}>
-                                    Smart move! You survived {playerState.roundsWon.toString()} rounds
-                                </div>
+                        </div>
+                    </>
+                ) : hasCashedOut ? (
+                    <>
+                        <div className={styles.statusIcon}>💰</div>
+                        <div className={styles.statusText}>
+                            <div className={styles.statusTitle}>CASHED OUT</div>
+                            <div className={styles.statusDesc}>
+                                Smart move! You survived {playerState.roundsWon.toString()} rounds
                             </div>
-                        </>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className={styles.statusIcon}>🔥</div>
+                        <div className={styles.statusText}>
+                            <div className={styles.statusTitle}>ALIVE</div>
+                            <div className={styles.statusDesc}>
+                                Current Claim: {formatEther(playerState.claimValue)} ETH
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        )}
+
+        {/* Main Content */}
+        <div className={styles.mainContent}>
+            {!hasJoined && gameState.isAcceptingPlayers ? (
+                // Join Game
+                <div className={styles.joinSection}>
+                    <h2>Enter the Arena</h2>
+                    <div className={styles.entryFee}>
+                        Entry Fee: {formatEther(gameState.entryFee)} ETH
+                    </div>
+
+                    <div className={styles.choiceButtons}>
+                        <button
+                            className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
+                            onClick={() => setSelectedChoice(1)}
+                        >
+                            <div className={styles.choiceLabel}>GROUP A</div>
+                            <div className={styles.choiceIcon}>🅰️</div>
+                        </button>
+                        <button
+                            className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
+                            onClick={() => setSelectedChoice(2)}
+                        >
+                            <div className={styles.choiceLabel}>GROUP B</div>
+                            <div className={styles.choiceIcon}>🅱️</div>
+                        </button>
+                    </div>
+
+                    <button
+                        className={styles.joinButton}
+                        onClick={handleJoinGame}
+                        disabled={!selectedChoice || isLoading}
+                    >
+                        {isLoading ? 'Joining...' : `Join Game (${formatEther(gameState.entryFee)} ETH)`}
+                    </button>
+                </div>
+            ) : hasJoined && !isEliminated && !hasCashedOut ? (
+                // Submit Choice for Current Round
+                <div className={styles.roundSection}>
+                    <h2>Round {gameState.currentRound.toString()}</h2>
+                    <div className={styles.roundDesc}>
+                        Make your prediction. Win or lose it all.
+                    </div>
+
+                    {playerState.hasSubmittedChoice ? (
+                        <div className={styles.waitingState}>
+                            <div className={styles.waitingIcon}>⏳</div>
+                            <div>Waiting for round to complete...</div>
+                            <div className={styles.yourChoice}>
+                                Your choice: <strong>Group {playerState.currentChoice === 1 ? 'A' : 'B'}</strong>
+                            </div>
+                        </div>
                     ) : (
                         <>
-                            <div className={styles.statusIcon}>🔥</div>
-                            <div className={styles.statusText}>
-                                <div className={styles.statusTitle}>ALIVE</div>
-                                <div className={styles.statusDesc}>
-                                    Current Claim: {formatEther(playerState.claimValue)} ETH
-                                </div>
+                            <div className={styles.choiceButtons}>
+                                <button
+                                    className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
+                                    onClick={() => setSelectedChoice(1)}
+                                >
+                                    <div className={styles.choiceLabel}>GROUP A</div>
+                                    <div className={styles.choiceIcon}>🅰️</div>
+                                </button>
+                                <button
+                                    className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
+                                    onClick={() => setSelectedChoice(2)}
+                                >
+                                    <div className={styles.choiceLabel}>GROUP B</div>
+                                    <div className={styles.choiceIcon}>🅱️</div>
+                                </button>
                             </div>
+
+                            <button
+                                className={styles.submitButton}
+                                onClick={handleSubmitChoice}
+                                disabled={!selectedChoice || isLoading}
+                            >
+                                {isLoading ? 'Submitting...' : 'Submit Choice'}
+                            </button>
                         </>
                     )}
                 </div>
-            )}
-
-            {/* Main Content */}
-            <div className={styles.mainContent}>
-                {!hasJoined && gameState.isAcceptingPlayers ? (
-                    // Join Game
-                    <div className={styles.joinSection}>
-                        <h2>Enter the Arena</h2>
-                        <div className={styles.entryFee}>
-                            Entry Fee: {formatEther(gameState.entryFee)} ETH
-                        </div>
-
-                        <div className={styles.choiceButtons}>
-                            <button
-                                className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
-                                onClick={() => setSelectedChoice(1)}
-                            >
-                                <div className={styles.choiceLabel}>GROUP A</div>
-                                <div className={styles.choiceIcon}>🅰️</div>
-                            </button>
-                            <button
-                                className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
-                                onClick={() => setSelectedChoice(2)}
-                            >
-                                <div className={styles.choiceLabel}>GROUP B</div>
-                                <div className={styles.choiceIcon}>🅱️</div>
-                            </button>
-                        </div>
-
-                        <button
-                            className={styles.joinButton}
-                            onClick={handleJoinGame}
-                            disabled={!selectedChoice || isLoading}
-                        >
-                            {isLoading ? 'Joining...' : `Join Game (${formatEther(gameState.entryFee)} ETH)`}
-                        </button>
+            ) : (
+                // Game Over / Spectator View
+                <div className={styles.spectatorView}>
+                    <div className={styles.spectatorIcon}>👀</div>
+                    <div className={styles.spectatorText}>
+                        {gameState.isCompleted ? 'Game Complete' : 'Spectating...'}
                     </div>
-                ) : hasJoined && !isEliminated && !hasCashedOut ? (
-                    // Submit Choice for Current Round
-                    <div className={styles.roundSection}>
-                        <h2>Round {gameState.currentRound.toString()}</h2>
-                        <div className={styles.roundDesc}>
-                            Make your prediction. Win or lose it all.
-                        </div>
-
-                        {playerState.hasSubmittedChoice ? (
-                            <div className={styles.waitingState}>
-                                <div className={styles.waitingIcon}>⏳</div>
-                                <div>Waiting for round to complete...</div>
-                                <div className={styles.yourChoice}>
-                                    Your choice: <strong>Group {playerState.currentChoice === 1 ? 'A' : 'B'}</strong>
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                <div className={styles.choiceButtons}>
-                                    <button
-                                        className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
-                                        onClick={() => setSelectedChoice(1)}
-                                    >
-                                        <div className={styles.choiceLabel}>GROUP A</div>
-                                        <div className={styles.choiceIcon}>🅰️</div>
-                                    </button>
-                                    <button
-                                        className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
-                                        onClick={() => setSelectedChoice(2)}
-                                    >
-                                        <div className={styles.choiceLabel}>GROUP B</div>
-                                        <div className={styles.choiceIcon}>🅱️</div>
-                                    </button>
-                                </div>
-
-                                <button
-                                    className={styles.submitButton}
-                                    onClick={handleSubmitChoice}
-                                    disabled={!selectedChoice || isLoading}
-                                >
-                                    {isLoading ? 'Submitting...' : 'Submit Choice'}
-                                </button>
-                            </>
-                        )}
-                    </div>
-                ) : (
-                    // Game Over / Spectator View
-                    <div className={styles.spectatorView}>
-                        <div className={styles.spectatorIcon}>👀</div>
-                        <div className={styles.spectatorText}>
-                            {gameState.isCompleted ? 'Game Complete' : 'Spectating...'}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Game Rules */}
-            <div className={styles.rules}>
-                <h3>📋 How It Works</h3>
-                <ul>
-                    <li>🎰 Each round: predict A or B (like BaseFlip)</li>
-                    <li>💀 Lose = Eliminated. Your stake goes to survivors</li>
-                    <li>🏆 Win = Your claim grows. Choose: Cash Out or Continue</li>
-                    <li>💰 Cash out anytime = take 99% of your claim (1% fee)</li>
-                    <li>👑 <strong>Rewards:</strong> 20 pts for entry + 100 pts for total victory</li>
-                </ul>
-            </div>
-
-            {/* Cash Out Decision Modal */}
-            {showCashOutModal && playerState && (
-                <CashOutDecisionModal
-                    claimValue={playerState.claimValue}
-                    roundsWon={Number(playerState.roundsWon)}
-                    onCashOut={handleCashOut}
-                    onContinue={handleContinue}
-                    isLoading={isLoading}
-                />
-            )}
-
-            {error && (
-                <div className={styles.error}>{error}</div>
+                </div>
             )}
         </div>
-    );
+
+        {/* Game Rules */}
+        <div className={styles.rules}>
+            <h3>📋 How It Works</h3>
+            <ul>
+                <li>🎰 Each round: predict A or B (like BaseFlip)</li>
+                <li>💀 Lose = Eliminated. Your stake goes to survivors</li>
+                <li>🏆 Win = Your claim grows. Choose: Cash Out or Continue</li>
+                <li>💰 Cash out anytime = take 99% of your claim (1% fee)</li>
+                <li>👑 <strong>Rewards:</strong> 20 pts for entry + 100 pts for total victory</li>
+            </ul>
+        </div>
+
+        {/* Cash Out Decision Modal */}
+        {showCashOutModal && playerState && (
+            <CashOutDecisionModal
+                claimValue={playerState.claimValue}
+                roundsWon={Number(playerState.roundsWon)}
+                onCashOut={handleCashOut}
+                onContinue={handleContinue}
+                isLoading={isLoading}
+            />
+        )}
+
+        {error && (
+            <div className={styles.error}>{error}</div>
+        )}
+    </div>
+);
 }
