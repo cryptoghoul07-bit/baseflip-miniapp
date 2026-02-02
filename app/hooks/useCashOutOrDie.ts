@@ -36,7 +36,13 @@ export function useCashOutOrDie(gameId: bigint) {
     const [error, setError] = useState<string | null>(null);
 
     const fetchGameState = useCallback(async () => {
-        if (!publicClient || gameId === 0n) return;
+        if (!publicClient || gameId === 0n) {
+            console.log('[CashOutOrDie] Cannot fetch - missing publicClient or gameId is 0');
+            return;
+        }
+
+        console.log('[CashOutOrDie] Fetching game state for gameId:', gameId.toString());
+        console.log('[CashOutOrDie] Contract address:', CONTRACT_ADDRESS);
 
         try {
             const game = await publicClient.readContract({
@@ -45,6 +51,8 @@ export function useCashOutOrDie(gameId: bigint) {
                 functionName: 'games',
                 args: [gameId],
             }) as any;
+
+            console.log('[CashOutOrDie] Game data received:', game);
 
             setGameState({
                 gameId,
@@ -68,8 +76,8 @@ export function useCashOutOrDie(gameId: bigint) {
             setPlayers(playerList);
 
         } catch (err) {
-            console.error('Error fetching game state:', err);
-            setError('Failed to load game state');
+            console.error('[CashOutOrDie] Error fetching game state:', err);
+            setError('Failed to load game state: ' + (err as any).message);
         }
     }, [publicClient, gameId]);
 
