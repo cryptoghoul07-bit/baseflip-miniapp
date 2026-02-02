@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "auto-winner": "node scripts/autoWinner.js",
+    "cashout-bot": "node scripts/cashOutAutoBot.js",
     "snapshot": "node scripts/snapshotAirdrop.js"
   },
   "engines": {
