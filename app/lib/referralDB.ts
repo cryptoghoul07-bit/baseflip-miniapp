@@ -30,13 +30,24 @@ function writeDB(data: ReferralData) {
 }
 
 export function recordReferral(referrer: string, referee: string): boolean {
+    console.log('[Referral] Attempting to record:', { referrer, referee });
+
     const db = readDB();
     const lowReferrer = referrer.toLowerCase();
     const lowReferee = referee.toLowerCase();
 
-    if (lowReferrer === lowReferee) return false;
-    if (db.referrers[lowReferee]) return false; // Already referred
+    // Validation checks
+    if (lowReferrer === lowReferee) {
+        console.log('[Referral] Rejected: Cannot refer yourself');
+        return false;
+    }
 
+    if (db.referrers[lowReferee]) {
+        console.log('[Referral] Rejected: User already referred by', db.referrers[lowReferee]);
+        return false;
+    }
+
+    // Record the referral
     db.referrers[lowReferee] = lowReferrer;
     if (!db.referrals[lowReferrer]) {
         db.referrals[lowReferrer] = [];
@@ -46,6 +57,11 @@ export function recordReferral(referrer: string, referee: string): boolean {
     }
 
     writeDB(db);
+    console.log('[Referral] SUCCESS! Referral recorded:', {
+        referrer: lowReferrer,
+        referee: lowReferee,
+        totalReferrals: db.referrals[lowReferrer].length
+    });
     return true;
 }
 

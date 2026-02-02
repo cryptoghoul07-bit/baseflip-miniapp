@@ -25,15 +25,18 @@ export function useReferrals(address: string | undefined) {
     }, [fetchStats]);
 
     const recordReferral = async (referrer: string, referee: string) => {
+        console.log('[useReferrals] Recording referral:', { referrer, referee });
         try {
-            await fetch('/api/referrals', {
+            const response = await fetch('/api/referrals', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ referrer, referee })
             });
+            const result = await response.json();
+            console.log('[useReferrals] Server response:', result);
             fetchStats();
         } catch (error) {
-            console.error('Error recording referral:', error);
+            console.error('[useReferrals] Error recording referral:', error);
         }
     };
 
