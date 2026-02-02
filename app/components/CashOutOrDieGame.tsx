@@ -136,7 +136,7 @@ export default function CashOutOrDieGame() {
     }
 
     // Check if user is in the players list effectively
-    const isParticipating = address && players.some(p => p.toLowerCase() === address.toLowerCase());
+    const isParticipating = address && players.some(p => p.toLowerCase() === (address ? address.toLowerCase() : ''));
     const hasJoined = isParticipating || (playerState && playerState.claimValue > 0n);
 
     const isEliminated = playerState && !playerState.isAlive && hasJoined && !playerState.hasCashedOut;
