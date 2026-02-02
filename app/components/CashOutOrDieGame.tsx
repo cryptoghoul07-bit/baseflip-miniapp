@@ -10,6 +10,7 @@ import styles from './styles/CashOutOrDie.module.css';
 export default function CashOutOrDieGame() {
     const { address, isConnected } = useAccount();
     const [showCashOutModal, setShowCashOutModal] = useState(false);
+    const [outcome, setOutcome] = useState<'eliminated' | 'survival' | 'victory' | 'cashedOut' | null>(null);
 
     // TODO: Get current game ID from contract or admin
     const gameId = 1n;
@@ -60,6 +61,35 @@ export default function CashOutOrDieGame() {
         }
     }, [playerState, gameState]);
 
+    // Track outcome animations
+    const prevRoundRef = React.useRef<bigint>(0n);
+    const prevAliveRef = React.useRef<boolean>(true);
+
+    useEffect(() => {
+        if (!gameState || !playerState) return;
+
+        // Detection: Elimination
+        if (prevAliveRef.current && !playerState.isAlive && !playerState.hasCashedOut) {
+            setOutcome('eliminated');
+            setTimeout(() => setOutcome(null), 4000);
+        }
+
+        // Detection: Survival (Next round reached)
+        if (gameState.currentRound > prevRoundRef.current && playerState.isAlive && prevRoundRef.current > 0n) {
+            setOutcome('survival');
+            setTimeout(() => setOutcome(null), 4000);
+        }
+
+        // Detection: Grand Victory
+        if (gameState.isCompleted && playerState.isAlive && !playerState.hasCashedOut) {
+            setOutcome('victory');
+            setTimeout(() => setOutcome(null), 4000);
+        }
+
+        prevRoundRef.current = gameState.currentRound;
+        prevAliveRef.current = playerState.isAlive;
+    }, [gameState?.currentRound, gameState?.isCompleted, playerState?.isAlive]);
+
     const handleJoinGame = async () => {
         if (!selectedChoice) return;
         await joinGame(selectedChoice);
@@ -76,6 +106,8 @@ export default function CashOutOrDieGame() {
         const success = await cashOut();
         if (success) {
             setShowCashOutModal(false);
+            setOutcome('cashedOut');
+            setTimeout(() => setOutcome(null), 4000);
         }
     };
 
@@ -109,6 +141,32 @@ export default function CashOutOrDieGame() {
 
     return (
         <div className={styles.container}>
+            {/* Outcome Overlays */}
+            {outcome === 'eliminated' && (
+                <div className={`${styles.outcomeOverlay} ${styles.eliminatedOverlay}`}>
+                    <div className={styles.outcomeIcon + ' ' + styles.shakingIcon}>💀</div>
+                    <div className={`${styles.outcomeTitle} ${styles.eliminatedTitle}`}>Eliminated</div>
+                </div>
+            )}
+            {outcome === 'survival' && (
+                <div className={`${styles.outcomeOverlay} ${styles.survivalOverlay}`}>
+                    <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>🛡️</div>
+                    <div className={`${styles.outcomeTitle} ${styles.survivalTitle}`}>Survived</div>
+                </div>
+            )}
+            {outcome === 'victory' && (
+                <div className={`${styles.outcomeOverlay} ${styles.victoryOverlay}`}>
+                    <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>👑</div>
+                    <div className={`${styles.outcomeTitle} ${styles.victoryTitle}`}>Victory</div>
+                </div>
+            )}
+            {outcome === 'cashedOut' && (
+                <div className={`${styles.outcomeOverlay} ${styles.cashedOutOverlay}`}>
+                    <div className={styles.outcomeIcon + ' ' + styles.glowingIcon}>💰</div>
+                    <div className={`${styles.outcomeTitle} ${styles.cashedOutTitle}`}>Cashed Out</div>
+                </div>
+            )}
+
             {/* Header Stats */}
             <div className={styles.header}>
                 <div className={styles.statBox}>

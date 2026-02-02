@@ -25,6 +25,7 @@
     margin-bottom: 16px;
     background: linear-gradient(135deg, #ff0844 0%, #ff6b35 100%);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -331,5 +332,178 @@
 
     .mainContent {
         padding: 24px;
+    }
+}
+
+/* Outcome Overlays */
+.outcomeOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    animation: fadeInOut 4s forwards;
+}
+
+.eliminatedOverlay {
+    background: radial-gradient(circle, rgba(255, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.95) 100%);
+}
+
+.survivalOverlay {
+    background: radial-gradient(circle, rgba(0, 255, 212, 0.2) 0%, rgba(0, 0, 0, 0.8) 100%);
+}
+
+.victoryOverlay {
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.3) 0%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+.cashedOutOverlay {
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.2) 0%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+.outcomeTitle {
+    font-family: var(--font-display);
+    font-size: 5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 12px;
+    margin-bottom: 20px;
+}
+
+.eliminatedTitle {
+    color: #ff0000;
+    text-shadow: 0 0 20px #ff0000, 0 0 40px #aa0000;
+    animation: jitter 0.2s infinite;
+}
+
+.survivalTitle {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px #008888;
+    animation: float 2s ease-in-out infinite;
+}
+
+.victoryTitle {
+    color: var(--gold);
+    text-shadow: 0 0 20px var(--gold), 0 0 40px #886600;
+    animation: pulseGlow 1.5s ease-in-out infinite;
+}
+
+.cashedOutTitle {
+    color: #ffcc00;
+    text-shadow: 0 0 25px #ffcc00, 0 0 50px #997700;
+    animation: float 1.5s ease-in-out infinite;
+}
+
+.outcomeIcon {
+    font-size: 8rem;
+    margin-bottom: 24px;
+}
+
+.shakingIcon {
+    animation: shake 0.5s infinite;
+}
+
+.glowingIcon {
+    animation: pulse 2s infinite;
+}
+
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+
+    15% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    85% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+@keyframes jitter {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    25% {
+        transform: translate(-2px, 2px);
+    }
+
+    50% {
+        transform: translate(2px, -2px);
+    }
+
+    75% {
+        transform: translate(-1px, -1px);
+    }
+
+    100% {
+        transform: translate(1px, 1px);
+    }
+}
+
+@keyframes shake {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(10deg);
+    }
+
+    50% {
+        transform: rotate(0deg);
+    }
+
+    75% {
+        transform: rotate(-10deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes pulseGlow {
+    0% {
+        filter: drop-shadow(0 0 10px var(--gold));
+        transform: scale(1);
+    }
+
+    50% {
+        filter: drop-shadow(0 0 30px var(--gold));
+        transform: scale(1.05);
+    }
+
+    100% {
+        filter: drop-shadow(0 0 10px var(--gold));
+        transform: scale(1);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
     }
 }
