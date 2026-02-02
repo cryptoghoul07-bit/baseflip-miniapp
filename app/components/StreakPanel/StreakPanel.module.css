@@ -102,6 +102,64 @@
     line-height: 1;
 }
 
+/* Close/Minimize Button */
+.closeButton {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 10;
+    transition: color 0.2s;
+}
+
+.closeButton:hover {
+    color: var(--gold);
+}
+
+/* Minimized State */
+.minimizedStreak {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border-radius: var(--border-radius-lg);
+    border: 2px solid;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    font-size: 1.2rem;
+    animation: slideInLeft 0.5s ease-out;
+}
+
+.minimizedStreak:hover {
+    transform: scale(1.05);
+}
+
+.minimizedCount {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.winStreak .minimizedCount {
+    color: #FFD700;
+}
+
+.lossStreak .minimizedCount {
+    color: #5D9CEC;
+}
+
 @keyframes slideInLeft {
     from {
         transform: translateX(-100px);
@@ -129,12 +187,25 @@
 /* Mobile responsive */
 @media (max-width: 768px) {
     .streakPanel {
-        left: 12px;
+        left: 8px;
+        right: 8px;
         bottom: 90px;
         /* Above the winners feed */
         padding: 12px 16px;
-        min-width: 150px;
+        min-width: unset;
+        width: auto;
         gap: 8px;
+    }
+
+    .minimizedStreak {
+        left: 12px;
+        bottom: 90px;
+        padding: 8px 12px;
+        font-size: 1rem;
+    }
+
+    .minimizedCount {
+        font-size: 0.9rem;
     }
 
     .streakIcon {

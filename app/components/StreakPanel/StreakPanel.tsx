@@ -6,6 +6,7 @@ import styles from './StreakPanel.module.css';
 export default function StreakPanel() {
     const { history } = useUserHistory();
     const [streak, setStreak] = useState({ type: 'none', count: 0, best: 0 });
+    const [isMinimized, setIsMinimized] = useState(false);
 
     useEffect(() => {
         if (history.length === 0) {
@@ -56,8 +57,28 @@ export default function StreakPanel() {
 
     if (streak.type === 'none') return null;
 
+    if (isMinimized) {
+        return (
+            <button
+                className={`${styles.minimizedStreak} ${streak.type === 'win' ? styles.winStreak : styles.lossStreak}`}
+                onClick={() => setIsMinimized(false)}
+                title="Expand Streak"
+            >
+                {streak.type === 'win' ? '🔥' : '❄️'}
+                <span className={styles.minimizedCount}>{streak.count}</span>
+            </button>
+        );
+    }
+
     return (
         <div className={`${styles.streakPanel} ${streak.type === 'win' ? styles.winStreak : styles.lossStreak}`}>
+            <button
+                className={styles.closeButton}
+                onClick={() => setIsMinimized(true)}
+                title="Collapse"
+            >
+                _
+            </button>
             <div className={styles.streakIcon}>
                 {streak.type === 'win' ? '🔥' : '❄️'}
             </div>
