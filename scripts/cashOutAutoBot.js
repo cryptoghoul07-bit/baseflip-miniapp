@@ -15,7 +15,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { randomInt } from 'crypto';
 import dotenv from 'dotenv';
 import express from 'express';
-import CashOutOrDieABI from '../app/lib/CashOutOrDieABI.json' assert { type: 'json' };
+import CashOutOrDieABI from '../app/lib/CashOutOrDieABI.json' with { type: 'json' };
 
 dotenv.config({ path: '.env.local' });
 
