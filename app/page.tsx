@@ -34,6 +34,8 @@ import { useReferrals } from "./hooks/useReferrals";
 import { useStreak } from "./hooks/useStreak";
 import StreakProtectionModal from "./components/StreakProtectionModal";
 import StreakPanel from "./components/StreakPanel/StreakPanel";
+import GameModeSelector from "./components/GameModeSelector";
+import CashOutOrDieGame from "./components/CashOutOrDieGame";
 
 // Internal component for stats to keep page clean
 function PlatformStatsBanner() {
@@ -72,6 +74,7 @@ export default function Home() {
   const { isFrameReady, setFrameReady } = useMiniKit();
   const [selectedLevel, setSelectedLevel] = useState(1);
   const [mounted, setMounted] = useState(false);
+  const [gameMode, setGameMode] = useState<'classic' | 'cashout'>('classic');
   const { address, isConnected } = useAccount();
   const {
     roundData,
@@ -153,6 +156,24 @@ export default function Home() {
       }
     }
   }, [address, recordReferral]);
+
+  // Load game mode from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedMode = localStorage.getItem('baseflip_game_mode');
+      if (savedMode === 'classic' || savedMode === 'cashout') {
+        setGameMode(savedMode);
+      }
+    }
+  }, []);
+
+  // Handle game mode change
+  const handleModeChange = (mode: 'classic' | 'cashout') => {
+    setGameMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('baseflip_game_mode', mode);
+    }
+  };
 
   const [lastAnimatedId, setLastAnimatedId] = useState<bigint | null>(() => {
     if (typeof window !== 'undefined') {
@@ -324,6 +345,9 @@ export default function Home() {
 
       <PlatformStatsBanner />
 
+      {/* Game Mode Selector */}
+      <GameModeSelector currentMode={gameMode} onModeChange={handleModeChange} />
+
       {!mounted ? (
         <div className={styles.loading}>
           <div className={styles.spinner} />
@@ -333,7 +357,11 @@ export default function Home() {
         <div className={styles.connectPrompt}>
           <p>🎰 Welcome to the tables. Connect your wallet to play.</p>
         </div>
+      ) : gameMode === 'cashout' ? (
+        // Cash-Out or Die Game Mode
+        <CashOutOrDieGame />
       ) : (
+        // BaseFlip Classic Mode
         <div className={styles.gameContent}>
           <LevelSelector
             selectedLevel={selectedLevel}
