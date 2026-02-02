@@ -152,41 +152,41 @@ export default function Leaderboard({ leaderboard, currentUserAddress, currentUs
             )}
 
             <div className={styles.rulesSection}>
-                <h3>📋 Fair Play & Point System</h3>
+                <h3>📋 Fair Play & Multi-Game Point System</h3>
                 <div className={styles.rulesList}>
                     <div className={styles.ruleItem}>
                         <span className={styles.ruleIcon}>🍕</span>
                         <div className={styles.ruleContent}>
-                            <strong>The "Point Pool" Model:</strong>
-                            <p>Every round has a fixed pool of points based on the ETH level. For Level 1 (0.1 ETH), the pool is 100 points.</p>
+                            <strong>Classic Flip (Capped):</strong>
+                            <p>Points are based on volume but <strong>capped at 100 per round</strong> to prevent whale farming. Winners take 80% (up to 80 pts), Losers take 20% (up to 20 pts).</p>
                         </div>
                     </div>
                     <div className={styles.ruleItem}>
-                        <span className={styles.ruleIcon}>🏆</span>
+                        <span className={styles.ruleIcon}>💀</span>
                         <div className={styles.ruleContent}>
-                            <strong>Winners (80%):</strong>
-                            <p>The winning side receives the lion's share (80%) of the round's points, distributed pro-rata to their stake.</p>
+                            <strong>Cash-Out or Die:</strong>
+                            <p>Earn <strong>20 points</strong> just for entering the arena. Survive as the last player to claim a massive <strong>100 point Victory Bonus</strong>.</p>
                         </div>
                     </div>
                     <div className={styles.ruleItem}>
-                        <span className={styles.ruleIcon}>🛡️</span>
+                        <span className={styles.ruleIcon}>🔥</span>
                         <div className={styles.ruleContent}>
-                            <strong>Losers (20%):</strong>
-                            <p>Even if you lose, you earn 20% of the points as a fair progress reward for participating.</p>
+                            <strong>Streak Bonuses:</strong>
+                            <p>Global streaks track across ALL games. Every milestone (2, 3, 5+ wins) awards bonus points to your total rank.</p>
                         </div>
                     </div>
                     <div className={styles.ruleItem}>
                         <span className={styles.ruleIcon}>🚫</span>
                         <div className={styles.ruleContent}>
                             <strong>Anti-Farming Protection:</strong>
-                            <p>Because every round takes a 1% fee, "farming" against yourself is mathematically expensive and net-negative. Honest players earn rank for free; farmers pay a "Point Tax" in real ETH.</p>
+                            <p>With the 1% fee and point caps, wash-trading is mathematically net-negative. Farmers lose ETH; real players gain rank. Historical farmed points are also normalized by 70%.</p>
                         </div>
                     </div>
                     <div className={styles.ruleItem}>
                         <span className={styles.ruleIcon}>🪂</span>
                         <div className={styles.ruleContent}>
                             <strong>Airdrop Distribution:</strong>
-                            <p>Top players receive Base-ETH airdrops proportional to their total points at the end of each season.</p>
+                            <p>Season rewards are distributed proportional to total points. Play any game mode to climb the Hall of Champions!</p>
                         </div>
                     </div>
                 </div>

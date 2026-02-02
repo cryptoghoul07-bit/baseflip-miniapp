@@ -267,7 +267,7 @@ export default function CashOutOrDieGame() {
                     <li>💀 Lose = Eliminated. Your stake goes to survivors</li>
                     <li>🏆 Win = Your claim grows. Choose: Cash Out or Continue</li>
                     <li>💰 Cash out anytime = take 99% of your claim (1% fee)</li>
-                    <li>🔥 Last survivor wins the entire pool</li>
+                    <li>👑 <strong>Rewards:</strong> 20 pts for entry + 100 pts for total victory</li>
                 </ul>
             </div>
 

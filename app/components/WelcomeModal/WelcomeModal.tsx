@@ -43,15 +43,15 @@ export default function WelcomeModal({ address }: WelcomeModalProps) {
                     <div className={styles.steps}>
                         <div className={styles.step}>
                             <span className={styles.stepNumber}>1</span>
-                            <p><strong>Pick a Side:</strong> Choose Pool A or Pool B.</p>
+                            <p><strong>Choose Your Arena:</strong> Play Classic BaseFlip or the high-stakes "Cash-Out or Die".</p>
                         </div>
                         <div className={styles.step}>
                             <span className={styles.stepNumber}>2</span>
-                            <p><strong>Place Your Bet:</strong> Stake ETH to join the round.</p>
+                            <p><strong>Stake & Survive:</strong> Predict the flip or outlast your rivals in survivor rounds.</p>
                         </div>
                         <div className={styles.step}>
                             <span className={styles.stepNumber}>3</span>
-                            <p><strong>Win Big:</strong> 50/50 chance. Winners take the losers' pot!</p>
+                            <p><strong>Rule the Leaderboard:</strong> Every win or survival earns you points toward the Season Airdrop!</p>
                         </div>
                     </div>
 
