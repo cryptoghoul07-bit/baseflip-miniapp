@@ -152,15 +152,47 @@
 
 @media (max-width: 768px) {
     .adminPanel {
-        left: 12px;
-        right: 12px;
+        left: 8px;
+        right: 8px;
         width: auto;
-        bottom: 12px;
+        bottom: 8px;
         max-width: none;
+        max-height: 60vh;
+        overflow-y: auto;
+        padding: 12px;
+        font-size: 0.85rem;
+    }
+
+    .header h3 {
+        font-size: 0.8rem;
+        margin-bottom: 8px;
+    }
+
+    .stats {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .statLabel {
+        font-size: 0.75rem;
+    }
+
+    .statValue {
+        font-size: 0.85rem;
+    }
+
+    .withdrawButton {
+        padding: 10px;
+        font-size: 0.8rem;
     }
 
     .minimizeButton {
-        bottom: 12px;
-        left: 12px;
+        bottom: 8px;
+        left: 8px;
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
     }
 }
