@@ -333,6 +333,17 @@
     .mainContent {
         padding: 24px;
     }
+
+    .outcomeTitle {
+        font-size: 2.5rem;
+        letter-spacing: 4px;
+        margin-bottom: 12px;
+    }
+
+    .outcomeIcon {
+        font-size: 5rem;
+        margin-bottom: 16px;
+    }
 }
 
 /* Outcome Overlays */
