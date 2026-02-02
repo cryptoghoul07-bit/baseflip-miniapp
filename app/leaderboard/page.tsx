@@ -59,15 +59,7 @@ export default function LeaderboardPage() {
                 />
             )}
 
-            <div className={styles.rulesSection}>
-                <h3>🔥 Streak Mode Rules</h3>
-                <ul>
-                    <li><strong>Win Streak:</strong> Consecutive wins build your streak count. Losing resets it to 0.</li>
-                    <li><strong>Bonus Points:</strong> Earn +1 point at 2 wins, +2 at 3 wins, and +5 at 5 wins.</li>
-                    <li><strong>Streak Protection:</strong> Pay 0.001 ETH to restore your streak after a loss.</li>
-                    <li><strong>Daily Challenge:</strong> Streaks reset every 24h (UTC) for the daily race.</li>
-                </ul>
-            </div>
+
         </div>
     );
 }
