@@ -17,7 +17,7 @@ export default function StreakPanel() {
         // Calculate current streak from most recent completed rounds
         const completedRounds = history
             .filter(h => h.isCompleted && !h.isCancelled)
-            .sort((a, b) => b.roundId - a.roundId);
+            .sort((a, b) => b.timestamp - a.timestamp);
 
         if (completedRounds.length === 0) {
             setStreak({ type: 'none', count: 0, best: 0 });

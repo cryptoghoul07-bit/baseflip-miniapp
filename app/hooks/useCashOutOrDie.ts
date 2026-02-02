@@ -21,6 +21,7 @@ export interface PlayerState {
     currentChoice: number;
     isAlive: boolean;
     hasCashedOut: boolean;
+    hasSubmittedChoice: boolean;
     roundsWon: bigint;
 }
 
@@ -97,7 +98,8 @@ export function useCashOutOrDie(gameId: bigint) {
                 currentChoice: player[1],
                 isAlive: player[2],
                 hasCashedOut: player[3],
-                roundsWon: player[4],
+                hasSubmittedChoice: player[4],
+                roundsWon: player[5],
             });
         } catch (err) {
             console.error('Error fetching player state:', err);

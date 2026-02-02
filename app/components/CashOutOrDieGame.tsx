@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { formatEther } from 'viem';
 import { useCashOutOrDie } from '../hooks/useCashOutOrDie';
+import { useStreak } from '../hooks/useStreak';
 import CashOutDecisionModal from './CashOutDecisionModal';
 import styles from './styles/CashOutOrDie.module.css';
 
@@ -25,7 +26,29 @@ export default function CashOutOrDieGame() {
         claimVictory,
     } = useCashOutOrDie(gameId);
 
+    const { recordResult } = useStreak(address);
+    const [lastRecordedGameId, setLastRecordedGameId] = useState<number>(0);
+
     const [selectedChoice, setSelectedChoice] = useState<1 | 2 | null>(null);
+
+    // Record results to streak system
+    useEffect(() => {
+        if (!playerState || !gameState || !address) return;
+        const gid = Number(gameState.gameId);
+
+        // If game is completed or player is out, record the result once
+        if (gid > lastRecordedGameId) {
+            if (playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive)) {
+                // Success
+                recordResult(gid + 10000, true); // Offset to avoid collision with classic rounds
+                setLastRecordedGameId(gid);
+            } else if (!playerState.isAlive) {
+                // Elimination
+                recordResult(gid + 10000, false);
+                setLastRecordedGameId(gid);
+            }
+        }
+    }, [playerState, gameState, address, lastRecordedGameId, recordResult]);
 
     // Check if player just won a round and should see cash-out modal
     useEffect(() => {
