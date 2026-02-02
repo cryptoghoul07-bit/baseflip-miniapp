@@ -5,6 +5,7 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { formatEther, parseAbi } from 'viem';
 import styles from './styles/AdminPanel.module.css';
 import AutoWinnerControl from './AutoWinnerControl';
+import CashOutOrDieAdmin from './CashOutOrDieAdmin';
 import { useEthPrice } from '../hooks/useEthPrice';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;

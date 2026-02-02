@@ -23,7 +23,7 @@ export default function CashOutOrDieAdmin() {
     });
 
     // Read player list
-    const { data: players } = useReadContract({
+    const { data: playersData } = useReadContract({
         address: CONTRACT_ADDRESS,
         abi: CashOutOrDieABI,
         functionName: 'getGamePlayers',
@@ -31,6 +31,7 @@ export default function CashOutOrDieAdmin() {
     });
 
     const game = gameData as any;
+    const players = (playersData as string[]) || [];
 
     const handleStartGame = async () => {
         try {
@@ -110,7 +111,7 @@ export default function CashOutOrDieAdmin() {
                 </div>
             )}
 
-            {players && players.length > 0 && (
+            {players && Array.isArray(players) && players.length > 0 && (
                 <div className={styles.playerList}>
                     <div className={styles.label}>Players ({players.length}):</div>
                     {players.slice(0, 5).map((player: string, i: number) => (
