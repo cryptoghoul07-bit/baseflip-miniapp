@@ -344,7 +344,7 @@ console.log(`🔑 Bot Address: ${account.address}`);
 console.log(`🌐 Network: Base Sepolia`);
 console.log(`⚙️  Settings:`);
 console.log(`   - Min Players: ${MIN_PLAYERS}`);
-console.log(`   - Round Delay: ${ROUND_DELAY / 1000}s`);
+console.log(`   - Round Delay: ${MIN_ROUND_TIME / 1000}s`);
 console.log(`\n🤖 Bot is now monitoring for games...\n`);
 
 // Run every 10 seconds
