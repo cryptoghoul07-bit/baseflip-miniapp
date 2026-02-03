@@ -232,6 +232,7 @@ export default function Home() {
 
             recordRoundResult({
               roundId: Number(lastWinner.id),
+              gameType: 'classic',
               amount: displayAmt,
               stakeAmount: formatEther(stakeAmtBn),
               group,
