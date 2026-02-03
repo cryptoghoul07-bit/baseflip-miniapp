@@ -64,9 +64,18 @@ export default function CashOutOrDieGame() {
     // Track outcome animations
     const prevRoundRef = React.useRef<bigint>(0n);
     const prevAliveRef = React.useRef<boolean>(true);
+    const isFirstLoad = React.useRef<boolean>(true);
 
     useEffect(() => {
         if (!gameState || !playerState) return;
+
+        // On first load, just sync refs and don't play animations
+        if (isFirstLoad.current) {
+            prevRoundRef.current = gameState.currentRound;
+            prevAliveRef.current = playerState.isAlive;
+            isFirstLoad.current = false;
+            return;
+        }
 
         // Detection: Elimination
         if (prevAliveRef.current && !playerState.isAlive && !playerState.hasCashedOut) {
