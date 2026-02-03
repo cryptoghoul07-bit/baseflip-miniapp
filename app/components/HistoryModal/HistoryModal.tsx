@@ -49,7 +49,7 @@ function HistoryRow({ item }: { item: HistoryItem }) {
                     color: item.gameType === 'cashout' ? '#FF4444' : '#00D4FF',
                     border: `1px solid ${item.gameType === 'cashout' ? 'rgba(255, 68, 68, 0.2)' : 'rgba(0, 212, 255, 0.2)'}`
                 }}>
-                    {item.gameType === 'cashout' ? 'CASHOUT' : 'CLASSIC'}
+                    {item.gameType === 'cashout' ? 'ARENA' : 'CLASSIC'}
                 </div>
                 <span className={styles.roundId}>#{item.roundId}</span>
                 <span className={styles.timestamp}>
