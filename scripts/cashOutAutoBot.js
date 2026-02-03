@@ -26,7 +26,8 @@ const RPC_URL = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia
 
 // Game settings
 const MIN_PLAYERS = 2; // Minimum players to start a game (match contract)
-const ROUND_DELAY = 15000; // 15 seconds between rounds for suspense
+const ROUND_DELAY = 45000; // 45 seconds between rounds for suspense and submission time
+const GRACE_PERIOD = 30000; // 30 seconds extra grace if players haven't submitted
 
 if (!CONTRACT_ADDRESS || !PRIVATE_KEY) {
     console.error('❌ Missing required environment variables:');
@@ -202,24 +203,78 @@ async function manageGame(gameId) {
 
     // If game is active (not accepting players, not completed)
     if (!state.isAcceptingPlayers && !state.isCompleted) {
-        const gameTracker = activeGames.get(gameId.toString()) || { lastRound: 0n };
+        const gameTracker = activeGames.get(gameId.toString()) || { lastRound: 0n, roundStartTime: 0 };
 
         // If we haven't processed this round yet
         if (state.currentRound > gameTracker.lastRound) {
-            console.log(`\n⏳ Waiting ${ROUND_DELAY / 1000}s before declaring Round #${state.currentRound} winner...`);
-
-            // Wait for suspense
-            await new Promise(resolve => setTimeout(resolve, ROUND_DELAY));
-
-            // Generate random winner
-            const winner = generateRandomWinner();
-
-            // Declare winner
-            const success = await declareRoundWinner(gameId, state.currentRound, winner);
-
-            if (success) {
-                gameTracker.lastRound = state.currentRound;
+            // New round detected, track start time
+            if (gameTracker.roundStartTime === 0) {
+                gameTracker.roundStartTime = Date.now();
                 activeGames.set(gameId.toString(), gameTracker);
+            }
+
+            // Fetch player details to check submissions
+            const playerList = await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: CashOutOrDieABI,
+                functionName: 'getGamePlayers',
+                args: [gameId],
+            });
+
+            let alivePlayers = 0;
+            let submittedPlayers = 0;
+
+            for (const playerAddr of playerList) {
+                const stats = await publicClient.readContract({
+                    address: CONTRACT_ADDRESS,
+                    abi: CashOutOrDieABI,
+                    functionName: 'getPlayerStats',
+                    args: [gameId, playerAddr],
+                });
+
+                // stats: claimValue, currentChoice, isAlive, hasCashedOut, roundsWon
+                if (stats[2] && !stats[3]) { // isAlive && !hasCashedOut
+                    alivePlayers++;
+                    if (stats[1] !== 0) { // currentChoice != 0
+                        submittedPlayers++;
+                    }
+                }
+            }
+
+            const elapsed = Date.now() - gameTracker.roundStartTime;
+            const allSubmitted = submittedPlayers >= alivePlayers && alivePlayers > 0;
+
+            // LOGGING
+            if (elapsed % 10000 < 2000) { // Log every ~10s
+                console.log(`\r⏳ Round #${state.currentRound}: ${submittedPlayers}/${alivePlayers} submitted. Elapsed: ${Math.floor(elapsed / 1000)}s   `);
+            }
+
+            // DECISION: Process winner if...
+            // 1. Everyone has submitted
+            // 2. OR elapsed >= ROUND_DELAY + GRACE_PERIOD (Time's up)
+            // 3. OR elapsed >= ROUND_DELAY AND at least one person has submitted (avoiding total freeze)
+
+            let shouldProcess = false;
+            if (allSubmitted) {
+                console.log(`\n✨ All players submitted for Round #${state.currentRound}! Processing...`);
+                shouldProcess = true;
+            } else if (elapsed >= (ROUND_DELAY + GRACE_PERIOD)) {
+                console.log(`\n⏰ Timeout reached for Round #${state.currentRound}. Processing survivors...`);
+                shouldProcess = true;
+            }
+
+            if (shouldProcess) {
+                // Generate random winner
+                const winner = generateRandomWinner();
+
+                // Declare winner
+                const success = await declareRoundWinner(gameId, state.currentRound, winner);
+
+                if (success) {
+                    gameTracker.lastRound = state.currentRound;
+                    gameTracker.roundStartTime = 0; // Reset for next round
+                    activeGames.set(gameId.toString(), gameTracker);
+                }
             }
         }
     }
