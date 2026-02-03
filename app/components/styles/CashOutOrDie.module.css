@@ -184,7 +184,7 @@
 /* Choice Buttons */
 .choiceButtons {
     display: grid;
-    grid-template-columns: 1fr 120px 1fr;
+    grid-template-columns: 1fr 1fr;
     align-items: center;
     gap: 16px;
     margin-bottom: 24px;
@@ -670,129 +670,190 @@
     font-weight: 600;
 }
 
-/* Arena Ranking Ladder */
-.ladderWrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    height: 100%;
+/* Arena Gauntlet Ranking */
+.gauntletContainer {
+    background: linear-gradient(180deg, rgba(20, 20, 30, 0.4) 0%, rgba(10, 10, 15, 0.6) 100%);
+    border: 1px solid rgba(0, 82, 255, 0.2);
+    border-radius: var(--border-radius-lg);
+    padding: 24px;
+    margin-bottom: 32px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.ladderLabel {
-    font-size: 0.7rem;
+.gauntletHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gauntletTitle {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    letter-spacing: 4px;
     color: var(--text-muted);
     font-weight: 800;
-    letter-spacing: 2px;
 }
 
-.ladderContainer {
-    display: flex;
-    flex-direction: column-reverse;
-    /* Round 1 at bottom, Finals at top */
-    gap: 4px;
-    width: 60px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    padding: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+.gauntletCount {
+    font-size: 0.8rem;
+    color: var(--neon-cyan);
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
 }
 
-.ladderStep {
+.gauntletLadder {
     display: flex;
     flex-direction: column;
+    gap: 12px;
+}
+
+.gauntletTier {
+    display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 6px 0;
-    border-radius: 4px;
-    transition: all 0.3s ease;
+    gap: 16px;
+    padding: 12px;
+    border-radius: var(--border-radius-md);
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.activeStep {
+.gauntletTierActive {
     background: rgba(0, 82, 255, 0.1);
-    box-shadow: inset 0 0 10px rgba(0, 82, 255, 0.2);
+    border: 1px solid rgba(0, 82, 255, 0.3);
+    transform: translateX(8px);
+    box-shadow: 0 4px 20px rgba(0, 82, 255, 0.15);
 }
 
-.passedStep {
-    opacity: 0.4;
+.gauntletTierPassed {
+    opacity: 0.5;
+    filter: grayscale(0.5);
 }
 
-.stepMarker {
-    font-size: 0.8rem;
-    font-weight: 900;
+.tierInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 140px;
+}
+
+.tierIcon {
+    font-size: 1.2rem;
+}
+
+.tierLabel {
+    font-size: 0.85rem;
+    font-weight: 800;
     color: var(--text-primary);
+    letter-spacing: 1px;
 }
 
-.stepBar {
+.tierVisual {
+    flex: 1;
+    height: 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tierTrack {
     width: 100%;
-    min-height: 4px;
-    display: flex;
-    justify-content: center;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
 }
 
-.liveSurvivors {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    justify-content: center;
-    max-width: 40px;
+.gauntletTierActive .tierTrack {
+    background: var(--gradient-blue);
+    box-shadow: 0 0 10px var(--base-blue-glow);
 }
 
-.survivorDot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
+.survivorCloud {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 4px;
+    width: 100%;
+}
+
+.livingNode {
+    width: 6px;
+    height: 6px;
     background: var(--neon-cyan);
-    box-shadow: 0 0 4px var(--neon-cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--neon-cyan);
+    animation: bounce 2s infinite ease-in-out;
 }
 
-.moreSurvivors {
-    font-size: 0.6rem;
-    color: var(--neon-cyan);
-    font-weight: 800;
-}
+@keyframes bounce {
 
-.ladderStats {
-    font-size: 0.65rem;
-    color: var(--neon-cyan);
-    font-weight: 800;
-    text-transform: uppercase;
+    0%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
 }
 
 @media (max-width: 768px) {
-    .choiceButtons {
-        grid-template-columns: 1fr;
-        gap: 24px;
+    .gauntletContainer {
+        padding: 16px;
     }
 
-    .ladderWrapper {
+    .gauntletLadder {
         flex-direction: row;
-        justify-content: center;
-        width: 100%;
-        padding: 12px 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.05);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 
-    .ladderContainer {
-        flex-direction: row;
-        /* Horizontal on mobile to save vertical space */
-        width: auto;
-        flex: 1;
-        justify-content: space-around;
-        padding: 4px 12px;
-    }
-
-    .ladderLabel {
+    .gauntletLadder::-webkit-scrollbar {
         display: none;
     }
 
-    .ladderStep {
-        padding: 4px 12px;
+    .gauntletTier {
+        flex-direction: column;
+        min-width: 100px;
+        flex-shrink: 0;
+        text-align: center;
+        gap: 8px;
     }
 
-    .liveSurvivors {
-        position: absolute;
-        top: -12px;
+    .gauntletTierActive {
+        transform: translateY(-4px);
+    }
+
+    .tierInfo {
+        flex-direction: column;
+        min-width: auto;
+        gap: 4px;
+    }
+
+    .tierLabel {
+        font-size: 0.7rem;
+    }
+
+    .tierVisual {
+        width: 100%;
+        height: 4px;
+    }
+
+    .survivorCloud {
+        justify-content: center;
+        top: -8px;
+    }
+
+    .livingNode {
+        width: 4px;
+        height: 4px;
     }
 }

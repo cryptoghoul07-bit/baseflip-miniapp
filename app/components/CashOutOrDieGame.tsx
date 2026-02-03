@@ -17,34 +17,43 @@ function ArenaRankingLadder({ survivorsA, survivorsB, currentRound, players }: {
     players: string[]
 }) {
     const totalSurvivors = survivorsA + survivorsB;
-    const rounds = [1, 2, 3, 4, 5];
+    const tiers = [
+        { id: 1, label: 'ROUND 1', icon: '⚔️' },
+        { id: 2, label: 'ROUND 2', icon: '🛡️' },
+        { id: 3, label: 'ROUND 3', icon: '🔥' },
+        { id: 4, label: 'SEMI-FINALS', icon: '⚡' },
+        { id: 5, label: 'THE FINALS', icon: '👑' }
+    ];
 
     return (
-        <div className={styles.ladderWrapper}>
-            <div className={styles.ladderLabel}>RANKING</div>
-            <div className={styles.ladderContainer}>
-                {rounds.map((r) => {
-                    const isActive = r === currentRound;
-                    const isPassed = r < currentRound;
+        <div className={styles.gauntletContainer}>
+            <div className={styles.gauntletHeader}>
+                <span className={styles.gauntletTitle}>THE GAUNTLET</span>
+                <span className={styles.gauntletCount}>{totalSurvivors} SURVIVORS</span>
+            </div>
+            <div className={styles.gauntletLadder}>
+                {tiers.map((tier) => {
+                    const isActive = tier.id === currentRound;
+                    const isPassed = tier.id < currentRound;
                     return (
-                        <div key={r} className={`${styles.ladderStep} ${isActive ? styles.activeStep : ''} ${isPassed ? styles.passedStep : ''}`}>
-                            <div className={styles.stepMarker}>{r === 5 ? '🏆' : r}</div>
-                            <div className={styles.stepBar}>
+                        <div key={tier.id} className={`${styles.gauntletTier} ${isActive ? styles.gauntletTierActive : ''} ${isPassed ? styles.gauntletTierPassed : ''}`}>
+                            <div className={styles.tierInfo}>
+                                <span className={styles.tierIcon}>{tier.icon}</span>
+                                <span className={styles.tierLabel}>{tier.label}</span>
+                            </div>
+                            <div className={styles.tierVisual}>
                                 {isActive && (
-                                    <div className={styles.liveSurvivors}>
-                                        {Array.from({ length: Math.min(totalSurvivors, 8) }).map((_, i) => (
-                                            <span key={i} className={styles.survivorDot}></span>
+                                    <div className={styles.survivorCloud}>
+                                        {Array.from({ length: Math.min(totalSurvivors, 12) }).map((_, i) => (
+                                            <div key={i} className={styles.livingNode} style={{ animationDelay: `${i * 0.1}s` }} />
                                         ))}
-                                        {totalSurvivors > 8 && <span className={styles.moreSurvivors}>+{totalSurvivors - 8}</span>}
                                     </div>
                                 )}
+                                <div className={styles.tierTrack}></div>
                             </div>
                         </div>
                     );
                 })}
-            </div>
-            <div className={styles.ladderStats}>
-                {totalSurvivors} SURVIVORS
             </div>
         </div>
     );
@@ -423,6 +432,13 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                             Entry Fee: {formatEther(gameState.entryFee)} ETH
                         </div>
 
+                        <ArenaRankingLadder
+                            players={players}
+                            survivorsA={players.length > 0 ? Math.ceil(players.length / 2) : 0}
+                            survivorsB={players.length > 0 ? Math.floor(players.length / 2) : 0}
+                            currentRound={1}
+                        />
+
                         <div className={styles.choiceButtons}>
                             <button
                                 className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
@@ -431,13 +447,6 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                 <div className={styles.choiceLabel}>GROUP A</div>
                                 <div className={styles.choiceIcon}>🅰️</div>
                             </button>
-
-                            <ArenaRankingLadder
-                                players={players}
-                                survivorsA={players.length > 0 ? Math.ceil(players.length / 2) : 0}
-                                survivorsB={players.length > 0 ? Math.floor(players.length / 2) : 0}
-                                currentRound={1}
-                            />
 
                             <button
                                 className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
@@ -461,6 +470,13 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                     <div className={styles.roundSection}>
                         <h2>Round {gameState.currentRound.toString()}</h2>
 
+                        <ArenaRankingLadder
+                            players={players}
+                            survivorsA={gameState?.poolACount ?? 0}
+                            survivorsB={gameState?.poolBCount ?? 0}
+                            currentRound={Number(gameState?.currentRound ?? 1)}
+                        />
+
                         <div className={styles.choiceButtons}>
                             <button
                                 className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
@@ -469,13 +485,6 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                 <div className={styles.choiceLabel}>GROUP A</div>
                                 <div className={styles.choiceIcon}>🅰️</div>
                             </button>
-
-                            <ArenaRankingLadder
-                                players={players}
-                                survivorsA={gameState?.poolACount ?? 0}
-                                survivorsB={gameState?.poolBCount ?? 0}
-                                currentRound={Number(gameState?.currentRound ?? 1)}
-                            />
 
                             <button
                                 className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
@@ -508,13 +517,6 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                         <div className={styles.choiceLabel}>GROUP A</div>
                                         <div className={styles.choiceIcon}>🅰️</div>
                                     </button>
-
-                                    <ArenaRankingLadder
-                                        players={players}
-                                        survivorsA={gameState?.poolACount ?? 0}
-                                        survivorsB={gameState?.poolBCount ?? 0}
-                                        currentRound={Number(gameState?.currentRound ?? 1)}
-                                    />
 
                                     <button
                                         className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}

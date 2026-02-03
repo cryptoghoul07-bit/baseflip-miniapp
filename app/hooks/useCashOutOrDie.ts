@@ -67,7 +67,7 @@ export function useCashOutOrDie(gameId: bigint) {
                 isAcceptingPlayers: game[4],
                 isCompleted: game[5],
                 activePlayerCount: game[6],
-                poolACount: 0, // Will be updated below
+                poolACount: 0,
                 poolBCount: 0,
             });
 
@@ -80,24 +80,6 @@ export function useCashOutOrDie(gameId: bigint) {
             }) as string[];
 
             setPlayers(playerList);
-
-            // Fetch current round choices to get A/B split
-            const currentRound = game[2];
-            const logs = await publicClient.getLogs({
-                address: CONTRACT_ADDRESS,
-                event: CashOutOrDieABI.find(x => x.name === 'ChoiceSubmitted') as any,
-                args: { gameId, round: currentRound },
-                fromBlock: 'earliest' // In production, use a more recent block
-            });
-
-            let a = 0;
-            let b = 0;
-            logs.forEach((log: any) => {
-                if (log.args.choice === 1) a++;
-                else if (log.args.choice === 2) b++;
-            });
-
-            setGameState(prev => prev ? { ...prev, poolACount: a, poolBCount: b } : null);
 
             // If 2 or more players joined, fetch the join time of the SECOND player
             // This is when the 30s recruitment countdown starts in the bot.
@@ -125,6 +107,39 @@ export function useCashOutOrDie(gameId: bigint) {
             setError('Failed to load game state: ' + (err as any).message);
         }
     }, [publicClient, gameId]);
+
+    // Separate effect for log scanning to not block main state
+    useEffect(() => {
+        if (!publicClient || gameId === 0n || !gameState) return;
+
+        const scanLogs = async () => {
+            try {
+                // Scanning logs on every poll is heavy. Let's do it but with a safe fromBlock.
+                // Normally we'd use the block height of the current round start.
+                const currentRound = gameState.currentRound;
+                const logs = await publicClient.getLogs({
+                    address: CONTRACT_ADDRESS,
+                    event: CashOutOrDieABI.find(x => x.name === 'ChoiceSubmitted') as any,
+                    args: { gameId, round: currentRound },
+                    fromBlock: BigInt(Math.max(0, Number(await publicClient.getBlockNumber()) - 2000))
+                });
+
+                let a = 0;
+                let b = 0;
+                logs.forEach((log: any) => {
+                    if (log.args.choice === 1) a++;
+                    else if (log.args.choice === 2) b++;
+                });
+
+                setGameState(prev => prev ? { ...prev, poolACount: a, poolBCount: b } : null);
+            } catch (e) {
+                console.warn('[CashOutOrDie] Log scan failed (RPC throttle?):', e);
+                // Don't set global error here, just skip updating counts
+            }
+        };
+
+        scanLogs();
+    }, [publicClient, gameId, gameState?.currentRound]);
 
     const fetchPlayerState = useCallback(async () => {
         if (!publicClient || !address || gameId === 0n) return;
