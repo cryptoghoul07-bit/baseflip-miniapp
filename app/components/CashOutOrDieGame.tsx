@@ -9,6 +9,51 @@ import CashOutDecisionModal from './CashOutDecisionModal';
 import CashOutOrDieABI from '../lib/CashOutOrDieABI.json';
 import styles from './styles/CashOutOrDie.module.css';
 
+// Internal component for the tournament circuit animation
+function ArenaCircuit() {
+    return (
+        <div className={styles.circuitContainer}>
+            <svg viewBox="0 0 100 100" className={styles.circuitSvg} preserveAspectRatio="none">
+                {/* Left side branches (Group A side) */}
+                <path d="M 0 20 H 10 V 35 H 20 V 50 H 40" className={styles.circuitLine} />
+                <path d="M 0 80 H 10 V 65 H 20 V 50 H 40" className={styles.circuitLine} />
+                <path d="M 0 50 H 40" className={styles.circuitLine} />
+
+                {/* Right side branches (Group B side) */}
+                <path d="M 100 20 H 90 V 35 H 80 V 50 H 60" className={styles.circuitLine} />
+                <path d="M 100 80 H 90 V 65 H 80 V 50 H 60" className={styles.circuitLine} />
+                <path d="M 100 50 H 60" className={styles.circuitLine} />
+
+                {/* Center tournament node */}
+                <circle cx="50" cy="50" r="6" className={styles.circuitFinalNode} />
+                <circle cx="50" cy="50" r="10" className={styles.circuitFinalRing} />
+
+                {/* Glow nodes at junctions */}
+                <circle cx="10" cy="35" r="1.5" className={styles.circuitNode} />
+                <circle cx="10" cy="65" r="1.5" className={styles.circuitNode} />
+                <circle cx="90" cy="35" r="1.5" className={styles.circuitNode} />
+                <circle cx="90" cy="65" r="1.5" className={styles.circuitNode} />
+                <circle cx="20" cy="50" r="1.5" className={styles.circuitNode} />
+                <circle cx="80" cy="50" r="1.5" className={styles.circuitNode} />
+
+                {/* Energy Pulses */}
+                <circle r="1" className={styles.circuitPulse}>
+                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 0 50 H 40" />
+                </circle>
+                <circle r="1" className={styles.circuitPulse}>
+                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 100 50 H 60" />
+                </circle>
+                <circle r="1" className={styles.circuitPulse} begin="1s">
+                    <animateMotion dur="3s" repeatCount="indefinite" path="M 0 20 H 10 V 35 H 20 V 50 H 40" />
+                </circle>
+                <circle r="1" className={styles.circuitPulse} begin="1.5s">
+                    <animateMotion dur="3s" repeatCount="indefinite" path="M 100 80 H 90 V 65 H 80 V 50 H 60" />
+                </circle>
+            </svg>
+        </div>
+    );
+}
+
 interface CashOutOrDieGameProps {
     onElimination?: (loss: { roundId: number; amount: string }) => void;
 }
@@ -390,6 +435,9 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                 <div className={styles.choiceLabel}>GROUP A</div>
                                 <div className={styles.choiceIcon}>🅰️</div>
                             </button>
+
+                            <ArenaCircuit />
+
                             <button
                                 className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
                                 onClick={() => setSelectedChoice(2)}
@@ -433,6 +481,9 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                         <div className={styles.choiceLabel}>GROUP A</div>
                                         <div className={styles.choiceIcon}>🅰️</div>
                                     </button>
+
+                                    <ArenaCircuit />
+
                                     <button
                                         className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
                                         onClick={() => setSelectedChoice(2)}
