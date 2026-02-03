@@ -9,12 +9,13 @@ import CashOutOrDieAdmin from './CashOutOrDieAdmin';
 import { useEthPrice } from '../hooks/useEthPrice';
 
 const CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_BASEFLIP_CONTRACT_ADDRESS || '0x999Dc642ed4223631A86a5d2e84fE302906eDA76') as `0x${string}`;
-
 const ABI = parseAbi([
     'function owner() view returns (address)',
     'function collectedFees() view returns (uint256)',
     'function withdrawFees() external'
 ]);
+
+const CASHOUT_CONTRACT_ADDRESS = (process.env.NEXT_PUBLIC_CASHOUTORDIE_CONTRACT_ADDRESS || '0x7134eaE427260946898E6B1cFeA5036415c97AEd') as `0x${string}`;
 
 export default function AdminPanel() {
     const { address } = useAccount();
@@ -31,9 +32,16 @@ export default function AdminPanel() {
         functionName: 'owner',
     });
 
-    // Read accumulated fees
+    // Read accumulated fees (BaseFlip)
     const { data: fees, refetch: refetchFees } = useReadContract({
         address: CONTRACT_ADDRESS,
+        abi: ABI,
+        functionName: 'collectedFees',
+    });
+
+    // Read accumulated fees (CashOut)
+    const { data: cashOutFees, refetch: refetchCashOutFees } = useReadContract({
+        address: CASHOUT_CONTRACT_ADDRESS,
         abi: ABI,
         functionName: 'collectedFees',
     });
@@ -57,8 +65,9 @@ export default function AdminPanel() {
     useEffect(() => {
         if (isSuccess) {
             refetchFees();
+            refetchCashOutFees();
         }
-    }, [isSuccess, refetchFees]);
+    }, [isSuccess, refetchFees, refetchCashOutFees]);
 
     // Debugging Owner Check
     useEffect(() => {
@@ -92,6 +101,14 @@ export default function AdminPanel() {
         });
     };
 
+    const handleWithdrawCashOut = () => {
+        writeContract({
+            address: CASHOUT_CONTRACT_ADDRESS,
+            abi: ABI,
+            functionName: 'withdrawFees',
+        });
+    };
+
     if (isMinimized) {
         return (
             <button
@@ -118,7 +135,7 @@ export default function AdminPanel() {
             </div>
 
             <div className={styles.stats}>
-                <div className={styles.statLabel}>Accumulated Fees:</div>
+                <div className={styles.statLabel}>Flip (Classic) Fees:</div>
                 <div className={styles.statValue}>
                     {parseFloat(feesEth).toFixed(6)} ETH
                     <div style={{ fontSize: '0.8rem', color: '#00D4FF', marginTop: '2px', fontWeight: 'normal' }}>
@@ -131,8 +148,27 @@ export default function AdminPanel() {
                 className={styles.withdrawButton}
                 onClick={handleWithdraw}
                 disabled={!hasFees || isPending || isConfirming}
+                style={{ marginBottom: '20px' }}
             >
-                {isPending || isConfirming ? 'Extracting...' : '💸 Withdraw Fees'}
+                {isPending || isConfirming ? 'Extracting...' : '💸 Withdraw Classic Fees'}
+            </button>
+
+            <div className={styles.stats}>
+                <div className={styles.statLabel}>Arena (CashOut) Fees:</div>
+                <div className={styles.statValue}>
+                    {(parseFloat(cashOutFees ? formatEther(cashOutFees) : '0')).toFixed(6)} ETH
+                    <div style={{ fontSize: '0.8rem', color: '#00D4FF', marginTop: '2px', fontWeight: 'normal' }}>
+                        ≈ {convertEthToUsd(cashOutFees ? formatEther(cashOutFees) : '0')}
+                    </div>
+                </div>
+            </div>
+
+            <button
+                className={styles.withdrawButton}
+                onClick={handleWithdrawCashOut}
+                disabled={!(cashOutFees && cashOutFees > 0n) || isPending || isConfirming}
+            >
+                {isPending || isConfirming ? 'Extracting...' : '💀 Withdraw Arena Fees'}
             </button>
 
             {isSuccess && (
