@@ -2,15 +2,29 @@
     position: fixed;
     bottom: 24px;
     left: 24px;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(16px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
     border: 1px solid var(--gold);
     border-radius: var(--border-radius-lg);
-    padding: 16px;
-    z-index: 900;
-    width: 260px;
-    box-shadow: var(--glow-gold);
-    animation: slideUp 0.5s ease-out;
+    padding: 24px;
+    z-index: 1000;
+    width: 360px;
+    /* Larger width for PC */
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.15);
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    scrollbar-width: thin;
+    scrollbar-color: var(--gold) transparent;
+}
+
+.adminPanel::-webkit-scrollbar {
+    width: 4px;
+}
+
+.adminPanel::-webkit-scrollbar-thumb {
+    background: var(--gold);
+    border-radius: 10px;
 }
 
 @keyframes slideUp {
@@ -116,21 +130,22 @@
     position: fixed;
     bottom: 24px;
     left: 24px;
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    background: var(--bg-card);
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid var(--gold);
     color: var(--gold);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     cursor: pointer;
-    z-index: 900;
+    z-index: 1000;
     box-shadow: var(--glow-gold);
     backdrop-filter: blur(16px);
     animation: fadeIn 0.3s ease-out;
+    transition: all 0.3s ease;
 }
 
 .minimizeButton:hover {
@@ -152,15 +167,16 @@
 
 @media (max-width: 768px) {
     .adminPanel {
-        left: 8px;
-        right: 8px;
+        left: 12px;
+        right: 12px;
         width: auto;
-        bottom: 8px;
+        bottom: 12px;
         max-width: none;
-        max-height: 60vh;
+        max-height: 75vh;
         overflow-y: auto;
-        padding: 12px;
+        padding: 16px;
         font-size: 0.85rem;
+        z-index: 1000;
     }
 
     .header h3 {
