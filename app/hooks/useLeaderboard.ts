@@ -113,13 +113,13 @@ export function useLeaderboard() {
 
                 coJoinedLogs.forEach((log: any) => {
                     const user = log.args.player.toLowerCase();
-                    pointsMap.set(user, (pointsMap.get(user) || 0) + 20); // Base participation
+                    pointsMap.set(user, (pointsMap.get(user) || 0) + 5); // Base participation reduced from 20 to 5
                 });
 
                 coCompletedLogs.forEach((log: any) => {
                     const winner = log.args.winner.toLowerCase();
                     if (winner !== '0x0000000000000000000000000000000000000000') {
-                        pointsMap.set(winner, (pointsMap.get(winner) || 0) + 100); // 100 point Victory Bonus
+                        pointsMap.set(winner, (pointsMap.get(winner) || 0) + 25); // Victory Bonus reduced from 100 to 25
                     }
                 });
             }
