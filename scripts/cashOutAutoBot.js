@@ -25,13 +25,14 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const RPC_URL = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
 
 // Game settings
-const MIN_PLAYERS = 2; // Minimum players to start a game (match contract)
-const ROUND_DELAY = 45000; // 45 seconds between rounds for suspense and submission time
-const GRACE_PERIOD = 30000; // 30 seconds extra grace if players haven't submitted
+const MIN_PLAYERS = 2; // Minimum players to start a game
+const LOBBY_COUNTDOWN = 30000; // 30s lobby for recruitment
+const MIN_ROUND_TIME = 30000; // Minimum 30s per round for suspense/decisions
+const SUBMISSION_TIMEOUT = 120000; // 2 minutes max to wait for everyone
+const SUSPENSE_DELAY = 10000; // 10s extra wait after everyone submits
 
 if (!CONTRACT_ADDRESS || !PRIVATE_KEY) {
-    console.error('❌ Missing required environment variables:');
-    console.error('   NEXT_PUBLIC_CASHOUTORDIE_CONTRACT_ADDRESS and PRIVATE_KEY must be set in .env.local');
+    console.error('❌ Missing required environment variables');
     process.exit(1);
 }
 
@@ -51,17 +52,17 @@ const walletClient = createWalletClient({
 
 // Track active games and their states
 const activeGames = new Map();
+const lobbyTimers = new Map(); // gameId -> startTime
 
 /**
- * Generate cryptographically secure random winner (1 or 2)
+ * Generate secure random winner
  */
 function generateRandomWinner() {
-    const random = randomInt(0, 2); // 0 or 1
-    return random + 1; // 1 or 2 (Group A or Group B)
+    return randomInt(0, 2) + 1;
 }
 
 /**
- * Get game state
+ * Get game state helper
  */
 async function getGameState(gameId) {
     try {
@@ -80,6 +81,7 @@ async function getGameState(gameId) {
         });
 
         return {
+            gameId: BigInt(gameId),
             entryFee: game[0],
             totalPool: game[1],
             currentRound: game[2],
@@ -87,11 +89,30 @@ async function getGameState(gameId) {
             isAcceptingPlayers: game[4],
             isCompleted: game[5],
             activePlayerCount: game[6],
-            playerCount: players.length,
+            playerList: players
         };
     } catch (error) {
-        console.error(`❌ Error fetching game ${gameId} state:`, error.message);
         return null;
+    }
+}
+
+/**
+ * Create a new game
+ */
+async function createNewGame() {
+    console.log(`\n🏗️  Creating new Arena Game (0.01 ETH)...`);
+    try {
+        const hash = await walletClient.writeContract({
+            address: CONTRACT_ADDRESS,
+            abi: CashOutOrDieABI,
+            functionName: 'createGame',
+            args: [BigInt(10000000000000000n)], // 0.01 ETH
+        });
+        console.log(`   Tx: ${hash.slice(0, 10)}...`);
+        await publicClient.waitForTransactionReceipt({ hash });
+        console.log(`✅ New game created!`);
+    } catch (error) {
+        console.error(`❌ Failed to create game:`, error.message);
     }
 }
 
@@ -101,30 +122,22 @@ async function getGameState(gameId) {
 async function startGame(gameId) {
     try {
         console.log(`\n🎮 Starting Game #${gameId}...`);
-
         const hash = await walletClient.writeContract({
             address: CONTRACT_ADDRESS,
             abi: CashOutOrDieABI,
             functionName: 'startGame',
             args: [gameId],
         });
-
-        console.log(`   Tx: ${hash.slice(0, 10)}...${hash.slice(-8)}`);
-
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
         if (receipt.status === 'success') {
             console.log(`✅ Game #${gameId} started!`);
-            activeGames.set(gameId.toString(), { lastRound: 0n });
+            activeGames.set(gameId.toString(), { lastRound: 0n, roundStartTime: 0 });
             return true;
-        } else {
-            console.log(`❌ Failed to start game #${gameId}`);
-            return false;
         }
     } catch (error) {
-        console.error(`❌ Error starting game ${gameId}:`, error.message);
-        return false;
+        console.error(`❌ Error starting game:`, error.message);
     }
+    return false;
 }
 
 /**
@@ -142,138 +155,118 @@ async function declareRoundWinner(gameId, round, winningGroup) {
             args: [gameId, winningGroup],
         });
 
-        console.log(`   Tx: ${hash.slice(0, 10)}...${hash.slice(-8)}`);
-
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
         if (receipt.status === 'success') {
-            console.log(`✅ Round #${round} winner declared!`);
+            console.log(`✅ Round #${round} complete!`);
             return true;
-        } else {
-            console.log(`❌ Failed to declare winner for round #${round}`);
-            return false;
         }
     } catch (error) {
         console.error(`❌ Error declaring winner:`, error.message);
-        return false;
     }
+    return false;
 }
 
-const lobbyTimers = new Map(); // gameId -> startTime
-
 /**
- * Monitor and manage a game
+ * Process a specific game
  */
 async function manageGame(gameId) {
     const state = await getGameState(gameId);
-
     if (!state) return;
 
-    // If game is completed, remove from active tracking
+    const gid = state.gameId.toString();
+
+    // 🏆 Game Completed
     if (state.isCompleted) {
-        console.log(`🏁 Game #${gameId} completed!`);
-        activeGames.delete(gameId.toString());
-        lobbyTimers.delete(gameId.toString());
+        if (!activeGames.get(gid)?.loggedComplete) {
+            console.log(`\n🏁 Game #${gid} is FINISHED.`);
+            activeGames.set(gid, { loggedComplete: true });
+        }
         return;
     }
 
-    // LOBBY PHASE: If accepting players and we have at least 2 players
-    if (state.isAcceptingPlayers && state.playerCount >= MIN_PLAYERS) {
-        if (!lobbyTimers.has(gameId.toString())) {
-            console.log(`\n🔔 Game #${gameId} lobby reached 2 players! Starting 30s countdown...`);
-            lobbyTimers.set(gameId.toString(), Date.now());
-        }
+    // 🚪 Lobby Phase
+    if (state.isAcceptingPlayers) {
+        const playerCount = state.playerList.length;
 
-        const startTime = lobbyTimers.get(gameId.toString());
-        const elapsed = (Date.now() - startTime) / 1000;
-        const remaining = Math.max(0, Math.ceil(30 - elapsed));
-
-        process.stdout.write(`\r⏳ Lobby #${gameId}: ${remaining}s remaining... (${state.playerCount} players)   `);
-
-        if (elapsed >= 30) {
-            console.log(`\n📢 Lobby countdown finished for Game #${gameId}. Starting now!`);
-            await startGame(gameId);
-            lobbyTimers.delete(gameId.toString());
-        }
-        return;
-    } else if (state.isAcceptingPlayers) {
-        // Reset timer if player count falls below 2 (e.g. if someone could leave, though contract might not allow)
-        lobbyTimers.delete(gameId.toString());
-    }
-
-    // If game is active (not accepting players, not completed)
-    if (!state.isAcceptingPlayers && !state.isCompleted) {
-        const gameTracker = activeGames.get(gameId.toString()) || { lastRound: 0n, roundStartTime: 0 };
-
-        // If we haven't processed this round yet
-        if (state.currentRound > gameTracker.lastRound) {
-            // New round detected, track start time
-            if (gameTracker.roundStartTime === 0) {
-                gameTracker.roundStartTime = Date.now();
-                activeGames.set(gameId.toString(), gameTracker);
+        if (playerCount >= MIN_PLAYERS) {
+            if (!lobbyTimers.has(gid)) {
+                console.log(`\n🔔 Game #${gid} reachable! Waiting 30s recruitment window...`);
+                lobbyTimers.set(gid, Date.now());
             }
 
-            // Fetch player details to check submissions
-            const playerList = await publicClient.readContract({
-                address: CONTRACT_ADDRESS,
-                abi: CashOutOrDieABI,
-                functionName: 'getGamePlayers',
-                args: [gameId],
-            });
+            const elapsed = Date.now() - lobbyTimers.get(gid);
+            if (elapsed >= LOBBY_COUNTDOWN) {
+                await startGame(state.gameId);
+                lobbyTimers.delete(gid);
+            } else {
+                const rem = Math.ceil((LOBBY_COUNTDOWN - elapsed) / 1000);
+                process.stdout.write(`\r⏳ Game #${gid} starts in ${rem}s... (${playerCount} players)   `);
+            }
+        } else {
+            lobbyTimers.delete(gid);
+        }
+        return;
+    }
 
-            let alivePlayers = 0;
-            let submittedPlayers = 0;
+    // ⚔️ Active Round Phase
+    if (!state.isAcceptingPlayers && !state.isCompleted) {
+        let gameTracker = activeGames.get(gid) || { lastRound: 0n, roundStartTime: 0 };
 
-            for (const playerAddr of playerList) {
-                const stats = await publicClient.readContract({
+        if (state.currentRound > gameTracker.lastRound) {
+            // New round initialized!
+            if (gameTracker.roundStartTime === 0) {
+                console.log(`\n⚔️ Round #${state.currentRound} began for Game #${gid}.`);
+                gameTracker.roundStartTime = Date.now();
+                activeGames.set(gid, gameTracker);
+            }
+
+            // Check alive players and their submissions
+            let aliveCount = 0;
+            let submittedCount = 0;
+
+            for (const addr of state.playerList) {
+                const p = await publicClient.readContract({
                     address: CONTRACT_ADDRESS,
                     abi: CashOutOrDieABI,
                     functionName: 'getPlayerStats',
-                    args: [gameId, playerAddr],
+                    args: [state.gameId, addr],
                 });
-
-                // stats: claimValue, currentChoice, isAlive, hasCashedOut, roundsWon
-                if (stats[2] && !stats[3]) { // isAlive && !hasCashedOut
-                    alivePlayers++;
-                    if (stats[1] !== 0) { // currentChoice != 0
-                        submittedPlayers++;
-                    }
+                if (p[2] && !p[3]) { // isAlive && !hasCashedOut
+                    aliveCount++;
+                    if (p[1] !== 0) submittedCount++; // choice submitted
                 }
             }
 
             const elapsed = Date.now() - gameTracker.roundStartTime;
-            const allSubmitted = submittedPlayers >= alivePlayers && alivePlayers > 0;
+            const allSubmitted = submittedCount >= aliveCount && aliveCount > 0;
+            const timedOut = elapsed >= SUBMISSION_TIMEOUT;
+            const metMinTime = elapsed >= MIN_ROUND_TIME;
 
-            // LOGGING
-            if (elapsed % 10000 < 2000) { // Log every ~10s
-                console.log(`\r⏳ Round #${state.currentRound}: ${submittedPlayers}/${alivePlayers} submitted. Elapsed: ${Math.floor(elapsed / 1000)}s   `);
+            // Log status
+            if (Date.now() % 10000 < 500) {
+                console.log(`\r   Game #${gid} R${state.currentRound}: ${submittedCount}/${aliveCount} submitted (${Math.floor(elapsed / 1000)}s)   `);
             }
 
-            // DECISION: Process winner if...
-            // 1. Everyone has submitted
-            // 2. OR elapsed >= ROUND_DELAY + GRACE_PERIOD (Time's up)
-            // 3. OR elapsed >= ROUND_DELAY AND at least one person has submitted (avoiding total freeze)
+            // DECISION
+            let shouldExecute = false;
 
-            let shouldProcess = false;
-            if (allSubmitted) {
-                console.log(`\n✨ All players submitted for Round #${state.currentRound}! Processing...`);
-                shouldProcess = true;
-            } else if (elapsed >= (ROUND_DELAY + GRACE_PERIOD)) {
-                console.log(`\n⏰ Timeout reached for Round #${state.currentRound}. Processing survivors...`);
-                shouldProcess = true;
+            if (allSubmitted && metMinTime) {
+                console.log(`\n✨ All players submitted for Game #${gid} R${state.currentRound}.`);
+                console.log(`   Waiting 10s suspense delay...`);
+                await new Promise(r => setTimeout(r, SUSPENSE_DELAY));
+                shouldExecute = true;
+            } else if (timedOut) {
+                console.log(`\n⏰ Timeout reached for Game #${gid} R${state.currentRound}. Proceeding...`);
+                shouldExecute = true;
             }
 
-            if (shouldProcess) {
-                // Generate random winner
-                const winner = generateRandomWinner();
-
-                // Declare winner
-                const success = await declareRoundWinner(gameId, state.currentRound, winner);
-
+            if (shouldExecute) {
+                const winnerGroup = generateRandomWinner();
+                const success = await declareRoundWinner(state.gameId, state.currentRound, winnerGroup);
                 if (success) {
                     gameTracker.lastRound = state.currentRound;
-                    gameTracker.roundStartTime = 0; // Reset for next round
-                    activeGames.set(gameId.toString(), gameTracker);
+                    gameTracker.roundStartTime = 0;
+                    activeGames.set(gid, gameTracker);
                 }
             }
         }
@@ -281,26 +274,37 @@ async function manageGame(gameId) {
 }
 
 /**
- * Main monitoring loop
+ * Main Loop
  */
 async function monitorGames() {
     try {
-        // Get current game ID
         const currentGameId = await publicClient.readContract({
             address: CONTRACT_ADDRESS,
             abi: CashOutOrDieABI,
             functionName: 'currentGameId',
         });
 
-        console.log(`\n🔍 Monitoring games up to Game #${currentGameId}...`);
+        // Check for needing a new game
+        let needsNew = true;
+        for (let i = 1n; i <= currentGameId; i++) {
+            const state = await getGameState(i);
+            if (state && (state.isAcceptingPlayers || (!state.isCompleted && state.activePlayerCount > 0))) {
+                needsNew = false;
+                break;
+            }
+        }
 
-        // Check all games from 1 to current
+        if (needsNew) {
+            await createNewGame();
+        }
+
+        // Manage all games
         for (let i = 1n; i <= currentGameId; i++) {
             await manageGame(i);
         }
 
     } catch (error) {
-        console.error('❌ Error in monitoring loop:', error.message);
+        console.error('❌ Loop error:', error.message);
     }
 }
 
