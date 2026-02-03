@@ -358,10 +358,29 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                 ) : (
                     // Game Over / Spectator View
                     <div className={styles.spectatorView}>
-                        <div className={styles.spectatorIcon}>👀</div>
-                        <div className={styles.spectatorText}>
-                            {gameState.isCompleted ? 'Game Complete' : 'Spectating...'}
-                        </div>
+                        {gameState.isCompleted && playerState?.isAlive && !playerState.hasCashedOut ? (
+                            <div className={styles.victoryClaimSection}>
+                                <div className={styles.spectatorIcon}>👑</div>
+                                <div className={styles.spectatorText}>YOU ARE THE VICTOR!</div>
+                                <div className={styles.payoutAmount}>
+                                    Winnings: {formatEther(playerState.claimValue)} ETH
+                                </div>
+                                <button
+                                    className={styles.claimVictoryButton}
+                                    onClick={claimVictory}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? 'Claiming...' : 'Claim Final Winnings'}
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className={styles.spectatorIcon}>👀</div>
+                                <div className={styles.spectatorText}>
+                                    {gameState.isCompleted ? 'Game Complete' : 'Spectating...'}
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>
