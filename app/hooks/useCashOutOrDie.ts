@@ -98,8 +98,8 @@ export function useCashOutOrDie(gameId: bigint) {
                 currentChoice: player[1],
                 isAlive: player[2],
                 hasCashedOut: player[3],
-                hasSubmittedChoice: player[4],
-                roundsWon: player[5],
+                roundsWon: player[4],
+                hasSubmittedChoice: player[1] !== 0, // inferred from currentChoice
             });
         } catch (err) {
             console.error('Error fetching player state:', err);

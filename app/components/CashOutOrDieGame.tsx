@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther } from 'viem';
 import { useCashOutOrDie } from '../hooks/useCashOutOrDie';
 import { useStreak } from '../hooks/useStreak';
 import CashOutDecisionModal from './CashOutDecisionModal';
+import CashOutOrDieABI from '../lib/CashOutOrDieABI.json';
 import styles from './styles/CashOutOrDie.module.css';
 
 interface CashOutOrDieGameProps {
@@ -14,10 +15,28 @@ interface CashOutOrDieGameProps {
 export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProps) {
     const { address, isConnected } = useAccount();
     const [showCashOutModal, setShowCashOutModal] = useState(false);
+    const [lastModalRound, setLastModalRound] = useState<bigint>(0n);
     const [outcome, setOutcome] = useState<'eliminated' | 'survival' | 'victory' | 'cashedOut' | null>(null);
+    const [gameId, setGameId] = useState<bigint>(1n);
 
-    // TODO: Get current game ID from contract or admin
-    const gameId = 1n;
+    // Fetch latest game ID on mount
+    const publicClient = usePublicClient();
+    useEffect(() => {
+        const fetchLatestGameId = async () => {
+            if (!publicClient) return;
+            try {
+                const cid = await publicClient.readContract({
+                    address: (process.env.NEXT_PUBLIC_CASHOUTORDIE_CONTRACT_ADDRESS || '0x0') as `0x${string}`,
+                    abi: CashOutOrDieABI,
+                    functionName: 'currentGameId'
+                }) as bigint;
+                if (cid > 0n) setGameId(cid);
+            } catch (err) {
+                console.error('Error fetching latest gameId:', err);
+            }
+        };
+        fetchLatestGameId();
+    }, [publicClient]);
 
     const {
         gameState,
@@ -58,12 +77,14 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
     // Check if player just won a round and should see cash-out modal
     useEffect(() => {
         if (playerState?.isAlive && !playerState.hasCashedOut && gameState) {
-            if (gameState.currentRound > 1n && playerState.currentChoice === 0) {
+            const currentRound = gameState.currentRound;
+            if (currentRound > 1n && playerState.currentChoice === 0 && lastModalRound < currentRound) {
                 // Player survived last round and hasn't submitted choice for new round
                 setShowCashOutModal(true);
+                setLastModalRound(currentRound);
             }
         }
-    }, [playerState, gameState]);
+    }, [playerState, gameState, lastModalRound]);
 
     // Track outcome animations
     const prevRoundRef = React.useRef<bigint>(0n);
