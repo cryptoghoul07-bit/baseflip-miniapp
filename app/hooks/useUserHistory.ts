@@ -159,7 +159,7 @@ export function useUserHistory() {
                                 stakeAmount: formatEther(entryFeeAmt),
                                 group,
                                 winningGroup: 0, // Not applicable globally
-                                isCompleted,
+                                isCompleted: isCompleted || hasCashedOut || !isAlive, // Mark as completed if player's journey is over
                                 isWinner,
                                 timestamp: startTime,
                                 isClaimed: hasCashedOut
