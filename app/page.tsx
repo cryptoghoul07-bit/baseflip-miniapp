@@ -361,7 +361,7 @@ export default function Home() {
         </div>
       ) : gameMode === 'cashout' ? (
         // Cash-Out or Die Game Mode
-        <CashOutOrDieGame />
+        <CashOutOrDieGame onElimination={(loss) => setRecentLoss(loss)} />
       ) : (
         // BaseFlip Classic Mode
         <div className={styles.gameContent}>

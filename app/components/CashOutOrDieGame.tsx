@@ -7,7 +7,11 @@ import { useStreak } from '../hooks/useStreak';
 import CashOutDecisionModal from './CashOutDecisionModal';
 import styles from './styles/CashOutOrDie.module.css';
 
-export default function CashOutOrDieGame() {
+interface CashOutOrDieGameProps {
+    onElimination?: (loss: { roundId: number; amount: string }) => void;
+}
+
+export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProps) {
     const { address, isConnected } = useAccount();
     const [showCashOutModal, setShowCashOutModal] = useState(false);
     const [outcome, setOutcome] = useState<'eliminated' | 'survival' | 'victory' | 'cashedOut' | null>(null);
@@ -80,6 +84,18 @@ export default function CashOutOrDieGame() {
         // Detection: Elimination
         if (prevAliveRef.current && !playerState.isAlive && !playerState.hasCashedOut) {
             setOutcome('eliminated');
+
+            // Trigger streak protection callback
+            if (onElimination) {
+                const gid = Number(gameState.gameId);
+                const rid = gid + 10000; // Offset to avoid collision with classic rounds
+                // Use entry fee as the "lost amount" for the banner
+                onElimination({
+                    roundId: rid,
+                    amount: formatEther(gameState.entryFee)
+                });
+            }
+
             setTimeout(() => setOutcome(null), 4000);
         }
 
