@@ -14,6 +14,8 @@ export interface GameState {
     isAcceptingPlayers: boolean;
     isCompleted: boolean;
     activePlayerCount: bigint;
+    poolACount: number;
+    poolBCount: number;
 }
 
 export interface PlayerState {
@@ -65,6 +67,8 @@ export function useCashOutOrDie(gameId: bigint) {
                 isAcceptingPlayers: game[4],
                 isCompleted: game[5],
                 activePlayerCount: game[6],
+                poolACount: 0, // Will be updated below
+                poolBCount: 0,
             });
 
             // Fetch player list
@@ -76,6 +80,24 @@ export function useCashOutOrDie(gameId: bigint) {
             }) as string[];
 
             setPlayers(playerList);
+
+            // Fetch current round choices to get A/B split
+            const currentRound = game[2];
+            const logs = await publicClient.getLogs({
+                address: CONTRACT_ADDRESS,
+                event: CashOutOrDieABI.find(x => x.name === 'ChoiceSubmitted') as any,
+                args: { gameId, round: currentRound },
+                fromBlock: 'earliest' // In production, use a more recent block
+            });
+
+            let a = 0;
+            let b = 0;
+            logs.forEach((log: any) => {
+                if (log.args.choice === 1) a++;
+                else if (log.args.choice === 2) b++;
+            });
+
+            setGameState(prev => prev ? { ...prev, poolACount: a, poolBCount: b } : null);
 
             // If 2 or more players joined, fetch the join time of the SECOND player
             // This is when the 30s recruitment countdown starts in the bot.

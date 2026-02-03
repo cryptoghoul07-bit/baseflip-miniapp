@@ -10,46 +10,70 @@ import CashOutOrDieABI from '../lib/CashOutOrDieABI.json';
 import styles from './styles/CashOutOrDie.module.css';
 
 // Internal component for the tournament circuit animation
-function ArenaCircuit() {
+function ArenaCircuit({ players, survivorsA, survivorsB, currentRound, gameState }: {
+    players: string[],
+    survivorsA: number,
+    survivorsB: number,
+    currentRound: number,
+    gameState: any
+}) {
+    // Current bracket depth (0 to 1)
+    // R1: 0 (outer), R2: 0.3, R3: 0.6, R4+: 1.0 (inner)
+    const depth = Math.min(1, (currentRound - 1) * 0.33);
+
     return (
-        <div className={styles.circuitContainer}>
-            <svg viewBox="0 0 100 100" className={styles.circuitSvg} preserveAspectRatio="none">
-                {/* Left side branches (Group A side) */}
-                <path d="M 0 20 H 10 V 35 H 20 V 50 H 40" className={styles.circuitLine} />
-                <path d="M 0 80 H 10 V 65 H 20 V 50 H 40" className={styles.circuitLine} />
-                <path d="M 0 50 H 40" className={styles.circuitLine} />
+        <div className={styles.bracketSection}>
+            <div className={styles.bracketTitle}>🏆 ARENA BRACKET</div>
+            <div className={styles.circuitContainer}>
+                <svg viewBox="0 0 100 100" className={styles.circuitSvg} preserveAspectRatio="none">
+                    {/* Background paths */}
+                    <path d="M 0 20 H 10 V 35 H 20 V 50 H 50" className={styles.circuitLine} />
+                    <path d="M 0 80 H 10 V 65 H 20 V 50" className={styles.circuitLine} />
+                    <path d="M 0 50 H 50" className={styles.circuitLine} />
+                    <path d="M 100 20 H 90 V 35 H 80 V 50 H 50" className={styles.circuitLine} />
+                    <path d="M 100 80 H 90 V 65 H 80 V 50" className={styles.circuitLine} />
+                    <path d="M 100 50 H 50" className={styles.circuitLine} />
 
-                {/* Right side branches (Group B side) */}
-                <path d="M 100 20 H 90 V 35 H 80 V 50 H 60" className={styles.circuitLine} />
-                <path d="M 100 80 H 90 V 65 H 80 V 50 H 60" className={styles.circuitLine} />
-                <path d="M 100 50 H 60" className={styles.circuitLine} />
+                    {/* Final Node */}
+                    <circle cx="50" cy="50" r="4.5" className={styles.circuitFinalNode} />
+                    <circle cx="50" cy="50" r="7" className={styles.circuitFinalRing} />
 
-                {/* Center tournament node */}
-                <circle cx="50" cy="50" r="6" className={styles.circuitFinalNode} />
-                <circle cx="50" cy="50" r="10" className={styles.circuitFinalRing} />
+                    {/* Dynamic Player Nodes - Group A */}
+                    {Array.from({ length: Math.min(survivorsA, 10) }).map((_, i) => {
+                        const offset = (i - (Math.min(survivorsA, 10) - 1) / 2) * 4;
+                        const x = depth * 40;
+                        const y = 50 + offset;
+                        return (
+                            <circle
+                                key={`a-${i}`}
+                                cx={x} cy={y} r="1.5"
+                                className={styles.playerNodeA}
+                                style={{ transition: 'cx 1s ease-in-out, cy 1s ease-in-out' }}
+                            />
+                        );
+                    })}
 
-                {/* Glow nodes at junctions */}
-                <circle cx="10" cy="35" r="1.5" className={styles.circuitNode} />
-                <circle cx="10" cy="65" r="1.5" className={styles.circuitNode} />
-                <circle cx="90" cy="35" r="1.5" className={styles.circuitNode} />
-                <circle cx="90" cy="65" r="1.5" className={styles.circuitNode} />
-                <circle cx="20" cy="50" r="1.5" className={styles.circuitNode} />
-                <circle cx="80" cy="50" r="1.5" className={styles.circuitNode} />
-
-                {/* Energy Pulses */}
-                <circle r="1" className={styles.circuitPulse}>
-                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 0 50 H 40" />
-                </circle>
-                <circle r="1" className={styles.circuitPulse}>
-                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 100 50 H 60" />
-                </circle>
-                <circle r="1" className={styles.circuitPulse} begin="1s">
-                    <animateMotion dur="3s" repeatCount="indefinite" path="M 0 20 H 10 V 35 H 20 V 50 H 40" />
-                </circle>
-                <circle r="1" className={styles.circuitPulse} begin="1.5s">
-                    <animateMotion dur="3s" repeatCount="indefinite" path="M 100 80 H 90 V 65 H 80 V 50 H 60" />
-                </circle>
-            </svg>
+                    {/* Dynamic Player Nodes - Group B */}
+                    {Array.from({ length: Math.min(survivorsB, 10) }).map((_, i) => {
+                        const offset = (i - (Math.min(survivorsB, 10) - 1) / 2) * 4;
+                        const x = 100 - (depth * 40);
+                        const y = 50 + offset;
+                        return (
+                            <circle
+                                key={`b-${i}`}
+                                cx={x} cy={y} r="1.5"
+                                className={styles.playerNodeB}
+                                style={{ transition: 'cx 1s ease-in-out, cy 1s ease-in-out' }}
+                            />
+                        );
+                    })}
+                </svg>
+            </div>
+            {gameState.isAcceptingPlayers && (
+                <div className={styles.bracketWaiting}>
+                    WAITING FOR FIGHTERS... ({players.length})
+                </div>
+            )}
         </div>
     );
 }
@@ -427,6 +451,14 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                             Entry Fee: {formatEther(gameState.entryFee)} ETH
                         </div>
 
+                        <ArenaCircuit
+                            players={players}
+                            survivorsA={players.length > 0 ? Math.ceil(players.length / 2) : 0}
+                            survivorsB={players.length > 0 ? Math.floor(players.length / 2) : 0}
+                            currentRound={1}
+                            gameState={gameState}
+                        />
+
                         <div className={styles.choiceButtons}>
                             <button
                                 className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
@@ -435,8 +467,6 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                 <div className={styles.choiceLabel}>GROUP A</div>
                                 <div className={styles.choiceIcon}>🅰️</div>
                             </button>
-
-                            <ArenaCircuit />
 
                             <button
                                 className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
@@ -459,6 +489,15 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                     // Submit Choice for Current Round
                     <div className={styles.roundSection}>
                         <h2>Round {gameState.currentRound.toString()}</h2>
+
+                        <ArenaCircuit
+                            players={players}
+                            survivorsA={Number(gameState.poolACount || 0)}
+                            survivorsB={Number(gameState.poolBCount || 0)}
+                            currentRound={Number(gameState.currentRound)}
+                            gameState={gameState}
+                        />
+
                         <div className={styles.roundDesc}>
                             Make your prediction. Win or lose it all.
                         </div>
@@ -481,8 +520,6 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                         <div className={styles.choiceLabel}>GROUP A</div>
                                         <div className={styles.choiceIcon}>🅰️</div>
                                     </button>
-
-                                    <ArenaCircuit />
 
                                     <button
                                         className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
