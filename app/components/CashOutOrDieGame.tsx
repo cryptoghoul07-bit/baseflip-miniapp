@@ -83,8 +83,8 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
         if (!playerState || !gameState || !address) return;
         const gid = Number(gameState.gameId);
 
-        // Detect if player is out
-        const isActuallyOut = !playerState.isAlive && !playerState.hasCashedOut;
+        // Detect if player is out (No longer alive)
+        const isActuallyOut = !playerState.isAlive;
         const isWinner = playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive);
 
         if (gid > lastRecordedGameId) {
@@ -92,6 +92,7 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                 recordResult(gid + 10000, true);
                 setLastRecordedGameId(gid);
             } else if (isActuallyOut) {
+                // Instant Streak Reset
                 recordResult(gid + 10000, false);
                 setLastRecordedGameId(gid);
             }
@@ -114,17 +115,15 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
             isClaimed: playerState.hasCashedOut
         };
 
-        const isActuallyOut = !playerState.isAlive && !playerState.hasCashedOut;
+        const isActuallyOut = !playerState.isAlive;
         const isWinner = playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive);
 
         if (isWinner) {
-            // Victory/Cashout
             recordRoundResult({ ...historyItem, isCompleted: true, isWinner: true });
         } else if (isActuallyOut) {
-            // Elimination
+            // Elimination - Instant History Update
             recordRoundResult({ ...historyItem, isCompleted: true, isWinner: false });
         } else if (playerState.claimValue > 0n && !playerState.hasCashedOut && playerState.isAlive) {
-            // Joined / Pending (Only if still alive)
             recordRoundResult({ ...historyItem, isCompleted: false, isWinner: false });
         }
     }, [playerState, gameState, address, recordRoundResult]);
