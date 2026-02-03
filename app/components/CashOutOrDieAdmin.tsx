@@ -72,7 +72,7 @@ export default function CashOutOrDieAdmin() {
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h4>💀 Cash-Out or Die Admin</h4>
+                <h4>💀 The Arena Admin</h4>
             </div>
 
             <div className={styles.section}>

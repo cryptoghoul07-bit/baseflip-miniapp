@@ -186,7 +186,7 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
             <div className={styles.container}>
                 <div className={styles.connectPrompt}>
                     <div className={styles.promptIcon}>💀</div>
-                    <h2>Cash-Out or Die</h2>
+                    <h2>The Arena</h2>
                     <p>Connect your wallet to enter the elimination arena</p>
                 </div>
             </div>

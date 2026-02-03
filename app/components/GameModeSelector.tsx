@@ -30,9 +30,8 @@ export default function GameModeSelector({ currentMode, onModeChange }: GameMode
                 >
                     <div className={styles.modeIcon}>💀</div>
                     <div className={styles.modeDetails}>
-                        <div className={styles.modeName}>Cash-Out or Die</div>
+                        <div className={styles.modeName}>The Arena</div>
                         <div className={styles.modeDesc}>
-                            <span className={styles.newBadge}>NEW</span>
                             Elimination survival game
                         </div>
                     </div>

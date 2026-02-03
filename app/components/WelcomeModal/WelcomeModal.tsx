@@ -43,7 +43,7 @@ export default function WelcomeModal({ address }: WelcomeModalProps) {
                     <div className={styles.steps}>
                         <div className={styles.step}>
                             <span className={styles.stepNumber}>1</span>
-                            <p><strong>Choose Your Arena:</strong> Play Classic BaseFlip or the high-stakes "Cash-Out or Die".</p>
+                            <p><strong>Choose Your Arena:</strong> Play Classic BaseFlip or the high-stakes survival "Arena".</p>
                         </div>
                         <div className={styles.step}>
                             <span className={styles.stepNumber}>2</span>
