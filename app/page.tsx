@@ -412,13 +412,18 @@ export default function Home() {
               <div className={styles.claimContent}>
                 <h3>🎉 You Have Unclaimed Winnings!</h3>
                 {claimableRounds.map((round) => (
-                  <div key={round.roundId.toString()} style={{ marginBottom: '10px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                  <div key={`${round.gameType}-${round.roundId}`} style={{ marginBottom: '10px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Round #{round.roundId.toString()}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                          {round.gameType === 'cashout' ? '🏛️ Arena Prize' : `Round #${round.roundId.toString()}`}
+                        </span>
+                        <span style={{ fontWeight: 800 }}>{formatEther(round.amount)} ETH</span>
+                      </div>
                       <button
                         className={styles.claimButton}
                         onClick={() => {
-                          claimRound(round.roundId);
+                          claimRound(round.roundId, round.gameType);
                           // Optimistic update or refetch
                           setTimeout(scanForWinnings, 5000);
                         }}
