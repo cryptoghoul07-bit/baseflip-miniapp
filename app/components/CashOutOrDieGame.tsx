@@ -83,14 +83,15 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
         if (!playerState || !gameState || !address) return;
         const gid = Number(gameState.gameId);
 
-        // If game is completed or player is out, record the result once
+        // Detect if player is out
+        const isActuallyOut = !playerState.isAlive && !playerState.hasCashedOut;
+        const isWinner = playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive);
+
         if (gid > lastRecordedGameId) {
-            if (playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive)) {
-                // Success
-                recordResult(gid + 10000, true); // Offset to avoid collision with classic rounds
+            if (isWinner) {
+                recordResult(gid + 10000, true);
                 setLastRecordedGameId(gid);
-            } else if (!playerState.isAlive) {
-                // Elimination
+            } else if (isActuallyOut) {
                 recordResult(gid + 10000, false);
                 setLastRecordedGameId(gid);
             }
@@ -113,14 +114,17 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
             isClaimed: playerState.hasCashedOut
         };
 
-        if (playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive)) {
+        const isActuallyOut = !playerState.isAlive && !playerState.hasCashedOut;
+        const isWinner = playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive);
+
+        if (isWinner) {
             // Victory/Cashout
             recordRoundResult({ ...historyItem, isCompleted: true, isWinner: true });
-        } else if (!playerState.isAlive && playerState.claimValue === 0n && (playerState.currentChoice !== 0 || gameState.currentRound > 1n)) {
+        } else if (isActuallyOut) {
             // Elimination
             recordRoundResult({ ...historyItem, isCompleted: true, isWinner: false });
-        } else if (playerState.claimValue > 0n && !playerState.hasCashedOut) {
-            // Joined / Pending
+        } else if (playerState.claimValue > 0n && !playerState.hasCashedOut && playerState.isAlive) {
+            // Joined / Pending (Only if still alive)
             recordRoundResult({ ...historyItem, isCompleted: false, isWinner: false });
         }
     }, [playerState, gameState, address, recordRoundResult]);
