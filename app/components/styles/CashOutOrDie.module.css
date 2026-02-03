@@ -670,124 +670,129 @@
     font-weight: 600;
 }
 
-/* Arena Bracket Ranking */
-.bracketSection {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: var(--border-radius-lg);
-    padding: 24px;
-    margin-bottom: 32px;
-    position: relative;
-    overflow: hidden;
+/* Arena Ranking Ladder */
+.ladderWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    height: 100%;
 }
 
-.bracketTitle {
-    text-align: center;
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    letter-spacing: 4px;
+.ladderLabel {
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin-bottom: 20px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.ladderContainer {
+    display: flex;
+    flex-direction: column-reverse;
+    /* Round 1 at bottom, Finals at top */
+    gap: 4px;
+    width: 60px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    padding: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ladderStep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.activeStep {
+    background: rgba(0, 82, 255, 0.1);
+    box-shadow: inset 0 0 10px rgba(0, 82, 255, 0.2);
+}
+
+.passedStep {
+    opacity: 0.4;
+}
+
+.stepMarker {
+    font-size: 0.8rem;
+    font-weight: 900;
+    color: var(--text-primary);
+}
+
+.stepBar {
+    width: 100%;
+    min-height: 4px;
+    display: flex;
+    justify-content: center;
+}
+
+.liveSurvivors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
+    max-width: 40px;
+}
+
+.survivorDot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--neon-cyan);
+    box-shadow: 0 0 4px var(--neon-cyan);
+}
+
+.moreSurvivors {
+    font-size: 0.6rem;
+    color: var(--neon-cyan);
     font-weight: 800;
 }
 
-.bracketWaiting {
-    text-align: center;
-    font-size: 0.8rem;
+.ladderStats {
+    font-size: 0.65rem;
     color: var(--neon-cyan);
-    margin-top: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    animation: pulse 2s infinite;
+    font-weight: 800;
+    text-transform: uppercase;
 }
 
-/* Arena Circuit Animation */
-.circuitContainer {
-    width: 100%;
-    height: 160px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    pointer-events: none;
-}
-
-.circuitSvg {
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-}
-
-.circuitLine {
-    fill: none;
-    stroke: rgba(255, 255, 255, 0.05);
-    stroke-width: 1;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-}
-
-.playerNodeA {
-    fill: var(--base-blue);
-    filter: drop-shadow(0 0 5px var(--base-blue));
-    stroke: #fff;
-    stroke-width: 0.5;
-}
-
-.playerNodeB {
-    fill: #ff6b35;
-    filter: drop-shadow(0 0 5px #ff6b35);
-    stroke: #fff;
-    stroke-width: 0.5;
-}
-
-.circuitFinalNode {
-    fill: var(--gold);
-    filter: drop-shadow(0 0 15px var(--gold));
-    animation: victoryGlow 2s infinite ease-in-out;
-}
-
-.circuitFinalRing {
-    fill: none;
-    stroke: var(--gold);
-    stroke-width: 1;
-    opacity: 0.2;
-    transform-origin: 50px 50px;
-    animation: circuitPulse 3s infinite linear;
-}
-
-.circuitPulse {
-    fill: #fff;
-    filter: drop-shadow(0 0 5px #fff);
-    opacity: 0.8;
-}
-
-@keyframes victoryGlow {
-
-    0%,
-    100% {
-        transform: scale(1);
-        filter: drop-shadow(0 0 15px var(--gold));
+@media (max-width: 768px) {
+    .choiceButtons {
+        grid-template-columns: 1fr;
+        gap: 24px;
     }
 
-    50% {
-        transform: scale(1.1);
-        filter: drop-shadow(0 0 25px var(--gold));
-    }
-}
-
-@keyframes circuitPulse {
-    0% {
-        transform: scale(0.8);
-        opacity: 0.4;
+    .ladderWrapper {
+        flex-direction: row;
+        justify-content: center;
+        width: 100%;
+        padding: 12px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    50% {
-        transform: scale(1.5);
-        opacity: 0.1;
+    .ladderContainer {
+        flex-direction: row;
+        /* Horizontal on mobile to save vertical space */
+        width: auto;
+        flex: 1;
+        justify-content: space-around;
+        padding: 4px 12px;
     }
 
-    100% {
-        transform: scale(2.2);
-        opacity: 0;
+    .ladderLabel {
+        display: none;
+    }
+
+    .ladderStep {
+        padding: 4px 12px;
+    }
+
+    .liveSurvivors {
+        position: absolute;
+        top: -12px;
     }
 }

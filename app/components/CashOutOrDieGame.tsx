@@ -9,71 +9,43 @@ import CashOutDecisionModal from './CashOutDecisionModal';
 import CashOutOrDieABI from '../lib/CashOutOrDieABI.json';
 import styles from './styles/CashOutOrDie.module.css';
 
-// Internal component for the tournament circuit animation
-function ArenaCircuit({ players, survivorsA, survivorsB, currentRound, gameState }: {
-    players: string[],
+// Internal component for the tournament ranking ladder
+function ArenaRankingLadder({ survivorsA, survivorsB, currentRound, players }: {
     survivorsA: number,
     survivorsB: number,
     currentRound: number,
-    gameState: any
+    players: string[]
 }) {
-    // Current bracket depth (0 to 1)
-    // R1: 0 (outer), R2: 0.3, R3: 0.6, R4+: 1.0 (inner)
-    const depth = Math.min(1, (currentRound - 1) * 0.33);
+    const totalSurvivors = survivorsA + survivorsB;
+    const rounds = [1, 2, 3, 4, 5];
 
     return (
-        <div className={styles.bracketSection}>
-            <div className={styles.bracketTitle}>🏆 ARENA BRACKET</div>
-            <div className={styles.circuitContainer}>
-                <svg viewBox="0 0 100 100" className={styles.circuitSvg} preserveAspectRatio="none">
-                    {/* Background paths */}
-                    <path d="M 0 20 H 10 V 35 H 20 V 50 H 50" className={styles.circuitLine} />
-                    <path d="M 0 80 H 10 V 65 H 20 V 50" className={styles.circuitLine} />
-                    <path d="M 0 50 H 50" className={styles.circuitLine} />
-                    <path d="M 100 20 H 90 V 35 H 80 V 50 H 50" className={styles.circuitLine} />
-                    <path d="M 100 80 H 90 V 65 H 80 V 50" className={styles.circuitLine} />
-                    <path d="M 100 50 H 50" className={styles.circuitLine} />
-
-                    {/* Final Node */}
-                    <circle cx="50" cy="50" r="4.5" className={styles.circuitFinalNode} />
-                    <circle cx="50" cy="50" r="7" className={styles.circuitFinalRing} />
-
-                    {/* Dynamic Player Nodes - Group A */}
-                    {Array.from({ length: Math.min(survivorsA, 10) }).map((_, i) => {
-                        const offset = (i - (Math.min(survivorsA, 10) - 1) / 2) * 4;
-                        const x = depth * 40;
-                        const y = 50 + offset;
-                        return (
-                            <circle
-                                key={`a-${i}`}
-                                cx={x} cy={y} r="1.5"
-                                className={styles.playerNodeA}
-                                style={{ transition: 'cx 1s ease-in-out, cy 1s ease-in-out' }}
-                            />
-                        );
-                    })}
-
-                    {/* Dynamic Player Nodes - Group B */}
-                    {Array.from({ length: Math.min(survivorsB, 10) }).map((_, i) => {
-                        const offset = (i - (Math.min(survivorsB, 10) - 1) / 2) * 4;
-                        const x = 100 - (depth * 40);
-                        const y = 50 + offset;
-                        return (
-                            <circle
-                                key={`b-${i}`}
-                                cx={x} cy={y} r="1.5"
-                                className={styles.playerNodeB}
-                                style={{ transition: 'cx 1s ease-in-out, cy 1s ease-in-out' }}
-                            />
-                        );
-                    })}
-                </svg>
+        <div className={styles.ladderWrapper}>
+            <div className={styles.ladderLabel}>RANKING</div>
+            <div className={styles.ladderContainer}>
+                {rounds.map((r) => {
+                    const isActive = r === currentRound;
+                    const isPassed = r < currentRound;
+                    return (
+                        <div key={r} className={`${styles.ladderStep} ${isActive ? styles.activeStep : ''} ${isPassed ? styles.passedStep : ''}`}>
+                            <div className={styles.stepMarker}>{r === 5 ? '🏆' : r}</div>
+                            <div className={styles.stepBar}>
+                                {isActive && (
+                                    <div className={styles.liveSurvivors}>
+                                        {Array.from({ length: Math.min(totalSurvivors, 8) }).map((_, i) => (
+                                            <span key={i} className={styles.survivorDot}></span>
+                                        ))}
+                                        {totalSurvivors > 8 && <span className={styles.moreSurvivors}>+{totalSurvivors - 8}</span>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
-            {gameState.isAcceptingPlayers && (
-                <div className={styles.bracketWaiting}>
-                    WAITING FOR FIGHTERS... ({players.length})
-                </div>
-            )}
+            <div className={styles.ladderStats}>
+                {totalSurvivors} SURVIVORS
+            </div>
         </div>
     );
 }
@@ -371,9 +343,9 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                         </div>
                     )}
                     {(gameState.totalPool > 0n && (formatEther(gameState.totalPool) === formatEther(gameState.entryFee * BigInt(players.length)))) && (
-                        // This logic is a bit simplified, but basically if entryFee * players == totalPool, 
+                        // This logic is a bit simplified, but basically if entryFee * players == totalPool,
                         // it might mean nobody has bet on the OTHER side if we check pools.
-                        // Actually, contract doesn't expose poolA/poolB for CashOut. 
+                        // Actually, contract doesn't expose poolA/poolB for CashOut.
                         // But we can check if anyone is on Group B vs Group A if we had that data.
                         // For now, let's just show a general "Invite Opponents" message if players < 4.
                         players.length < 4 && (
@@ -451,14 +423,6 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                             Entry Fee: {formatEther(gameState.entryFee)} ETH
                         </div>
 
-                        <ArenaCircuit
-                            players={players}
-                            survivorsA={players.length > 0 ? Math.ceil(players.length / 2) : 0}
-                            survivorsB={players.length > 0 ? Math.floor(players.length / 2) : 0}
-                            currentRound={1}
-                            gameState={gameState}
-                        />
-
                         <div className={styles.choiceButtons}>
                             <button
                                 className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
@@ -467,6 +431,13 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                 <div className={styles.choiceLabel}>GROUP A</div>
                                 <div className={styles.choiceIcon}>🅰️</div>
                             </button>
+
+                            <ArenaRankingLadder
+                                players={players}
+                                survivorsA={players.length > 0 ? Math.ceil(players.length / 2) : 0}
+                                survivorsB={players.length > 0 ? Math.floor(players.length / 2) : 0}
+                                currentRound={1}
+                            />
 
                             <button
                                 className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
@@ -490,13 +461,30 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                     <div className={styles.roundSection}>
                         <h2>Round {gameState.currentRound.toString()}</h2>
 
-                        <ArenaCircuit
-                            players={players}
-                            survivorsA={Number(gameState.poolACount || 0)}
-                            survivorsB={Number(gameState.poolBCount || 0)}
-                            currentRound={Number(gameState.currentRound)}
-                            gameState={gameState}
-                        />
+                        <div className={styles.choiceButtons}>
+                            <button
+                                className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
+                                onClick={() => setSelectedChoice(1)}
+                            >
+                                <div className={styles.choiceLabel}>GROUP A</div>
+                                <div className={styles.choiceIcon}>🅰️</div>
+                            </button>
+
+                            <ArenaRankingLadder
+                                players={players}
+                                survivorsA={gameState?.poolACount ?? 0}
+                                survivorsB={gameState?.poolBCount ?? 0}
+                                currentRound={Number(gameState?.currentRound ?? 1)}
+                            />
+
+                            <button
+                                className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
+                                onClick={() => setSelectedChoice(2)}
+                            >
+                                <div className={styles.choiceLabel}>GROUP B</div>
+                                <div className={styles.choiceIcon}>🅱️</div>
+                            </button>
+                        </div>
 
                         <div className={styles.roundDesc}>
                             Make your prediction. Win or lose it all.
@@ -520,6 +508,13 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                                         <div className={styles.choiceLabel}>GROUP A</div>
                                         <div className={styles.choiceIcon}>🅰️</div>
                                     </button>
+
+                                    <ArenaRankingLadder
+                                        players={players}
+                                        survivorsA={gameState?.poolACount ?? 0}
+                                        survivorsB={gameState?.poolBCount ?? 0}
+                                        currentRound={Number(gameState?.currentRound ?? 1)}
+                                    />
 
                                     <button
                                         className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
@@ -583,19 +578,23 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
             </div>
 
             {/* Cash Out Decision Modal */}
-            {showCashOutModal && playerState && (
-                <CashOutDecisionModal
-                    claimValue={playerState.claimValue}
-                    roundsWon={Number(playerState.roundsWon)}
-                    onCashOut={handleCashOut}
-                    onContinue={handleContinue}
-                    isLoading={isLoading}
-                />
-            )}
+            {
+                showCashOutModal && playerState && (
+                    <CashOutDecisionModal
+                        claimValue={playerState.claimValue}
+                        roundsWon={Number(playerState.roundsWon)}
+                        onCashOut={handleCashOut}
+                        onContinue={handleContinue}
+                        isLoading={isLoading}
+                    />
+                )
+            }
 
-            {error && (
-                <div className={styles.error}>{error}</div>
-            )}
-        </div>
+            {
+                error && (
+                    <div className={styles.error}>{error}</div>
+                )
+            }
+        </div >
     );
 }
