@@ -740,6 +740,15 @@
     background: rgba(0, 82, 255, 0.2);
 }
 
+.finalMark {
+    border-color: var(--gold);
+    box-shadow: 0 0 15px var(--gold);
+}
+
+.finalMark.roundMarkActive {
+    background: rgba(255, 215, 0, 0.2);
+}
+
 .roundNumber {
     font-size: 0.7rem;
     font-weight: 900;

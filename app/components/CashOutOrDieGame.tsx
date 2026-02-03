@@ -11,8 +11,12 @@ import styles from './styles/CashOutOrDie.module.css';
 
 // Internal component for the tournament vertical progress bar
 function ArenaProgress({ currentRound }: { currentRound: number }) {
-    const rounds = [1, 2, 3, 4, 5];
-    const progress = Math.min((currentRound / 5) * 100, 100);
+    // Dynamic max rounds: default to 5, but grow if game exceeds it
+    const maxRounds = Math.max(5, currentRound);
+    const rounds = Array.from({ length: maxRounds }, (_, i) => i + 1);
+
+    // Progress calculation: 0 if in lobby, otherwise climb the increments
+    const progress = currentRound === 0 ? 0 : ((currentRound - 1) / (maxRounds - 1)) * 100;
 
     return (
         <div className={styles.progressContainer}>
@@ -20,15 +24,17 @@ function ArenaProgress({ currentRound }: { currentRound: number }) {
             <div className={styles.progressBarWrapper}>
                 <div
                     className={styles.progressBarFill}
-                    style={{ height: `${progress}%` }}
+                    style={{ height: currentRound > 0 ? `${progress}%` : '0%' }}
                 />
                 {rounds.map((r) => (
                     <div
                         key={r}
-                        className={`${styles.roundMark} ${r <= currentRound ? styles.roundMarkActive : ''}`}
-                        style={{ bottom: `${((r - 1) / 4) * 100}%` }}
+                        className={`${styles.roundMark} ${r <= currentRound ? styles.roundMarkActive : ''} ${r === maxRounds ? styles.finalMark : ''}`}
+                        style={{ bottom: `${((r - 1) / (maxRounds - 1)) * 100}%` }}
                     >
-                        <span className={styles.roundNumber}>{r === 5 ? '🏆' : r}</span>
+                        <span className={styles.roundNumber}>
+                            {r === maxRounds ? '🏆' : r}
+                        </span>
                     </div>
                 ))}
             </div>
@@ -410,7 +416,7 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                         </div>
 
                         <div className={styles.arenaMainLayout}>
-                            <ArenaProgress currentRound={1} />
+                            <ArenaProgress currentRound={0} />
 
                             <div className={styles.arenaActionArea}>
                                 <div className={styles.choiceButtons}>
