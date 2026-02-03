@@ -140,10 +140,12 @@ export function useUserHistory() {
 
                         if (g && p) {
                             const group = Number(p[1]);
-                            if (group === 0) continue;
+                            // For Arena, we continue even if group is 0 because the contract resets choice to 0 after elimination
+                            // We only skip if they aren't in the game and have no claim value (clean state)
+                            const claimValue = p[0] as bigint;
+                            if (group === 0 && claimValue === 0n && !p[2] && !p[3]) continue;
 
                             const entryFeeAmt = g[0] as bigint;
-                            const claimValue = p[0] as bigint;
                             const isCompleted = g[5] as boolean;
                             const hasCashedOut = p[3] as boolean;
                             const isAlive = p[2] as boolean;
@@ -157,9 +159,9 @@ export function useUserHistory() {
                                 gameType: 'cashout',
                                 amount: displayAmt,
                                 stakeAmount: formatEther(entryFeeAmt),
-                                group,
-                                winningGroup: 0, // Not applicable globally
-                                isCompleted: isCompleted || hasCashedOut || !isAlive, // Mark as completed if player's journey is over
+                                group: group || 1, // Fallback to 1 if reset (visual only)
+                                winningGroup: 0,
+                                isCompleted: isCompleted || hasCashedOut || !isAlive,
                                 isWinner,
                                 timestamp: startTime,
                                 isClaimed: hasCashedOut

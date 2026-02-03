@@ -4,6 +4,7 @@ import { useAccount, usePublicClient } from 'wagmi';
 import { formatEther } from 'viem';
 import { useCashOutOrDie } from '../hooks/useCashOutOrDie';
 import { useStreak } from '../hooks/useStreak';
+import { useUserHistory } from '../hooks/useUserHistory';
 import CashOutDecisionModal from './CashOutDecisionModal';
 import CashOutOrDieABI from '../lib/CashOutOrDieABI.json';
 import styles from './styles/CashOutOrDie.module.css';
@@ -51,6 +52,8 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
         claimVictory,
     } = useCashOutOrDie(gameId);
 
+    const { recordRoundResult } = useUserHistory();
+
     const [lobbyCountdown, setLobbyCountdown] = useState<number | null>(null);
 
     // Lobby Countdown Logic
@@ -93,6 +96,34 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
             }
         }
     }, [playerState, gameState, address, lastRecordedGameId, recordResult]);
+
+    // PERSISTENCE: Record to History Modal (Pending/Won/Lost)
+    useEffect(() => {
+        if (!playerState || !gameState || !address) return;
+        const gid = Number(gameState.gameId);
+
+        const historyItem = {
+            roundId: gid,
+            gameType: 'cashout' as const,
+            amount: formatEther(playerState.claimValue > 0n ? playerState.claimValue : gameState.entryFee),
+            stakeAmount: formatEther(gameState.entryFee),
+            group: playerState.currentChoice || 1,
+            winningGroup: 0,
+            timestamp: Number(gameState.startTime) || Math.floor(Date.now() / 1000),
+            isClaimed: playerState.hasCashedOut
+        };
+
+        if (playerState.hasCashedOut || (gameState.isCompleted && playerState.isAlive)) {
+            // Victory/Cashout
+            recordRoundResult({ ...historyItem, isCompleted: true, isWinner: true });
+        } else if (!playerState.isAlive && playerState.claimValue === 0n && (playerState.currentChoice !== 0 || gameState.currentRound > 1n)) {
+            // Elimination
+            recordRoundResult({ ...historyItem, isCompleted: true, isWinner: false });
+        } else if (playerState.claimValue > 0n && !playerState.hasCashedOut) {
+            // Joined / Pending
+            recordRoundResult({ ...historyItem, isCompleted: false, isWinner: false });
+        }
+    }, [playerState, gameState, address, recordRoundResult]);
 
     // Check if player just won a round and should see cash-out modal
     useEffect(() => {
