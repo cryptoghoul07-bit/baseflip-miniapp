@@ -25,7 +25,7 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const RPC_URL = process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org';
 
 // Game settings
-const MIN_PLAYERS = 3; // Minimum players to start a game
+const MIN_PLAYERS = 2; // Minimum players to start a game (match contract)
 const ROUND_DELAY = 15000; // 15 seconds between rounds for suspense
 
 if (!CONTRACT_ADDRESS || !PRIVATE_KEY) {
@@ -158,6 +158,8 @@ async function declareRoundWinner(gameId, round, winningGroup) {
     }
 }
 
+const lobbyTimers = new Map(); // gameId -> startTime
+
 /**
  * Monitor and manage a game
  */
@@ -170,14 +172,32 @@ async function manageGame(gameId) {
     if (state.isCompleted) {
         console.log(`🏁 Game #${gameId} completed!`);
         activeGames.delete(gameId.toString());
+        lobbyTimers.delete(gameId.toString());
         return;
     }
 
-    // If accepting players and we have enough, start the game
+    // LOBBY PHASE: If accepting players and we have at least 2 players
     if (state.isAcceptingPlayers && state.playerCount >= MIN_PLAYERS) {
-        console.log(`\n📢 Game #${gameId} has ${state.playerCount} players - starting...`);
-        await startGame(gameId);
+        if (!lobbyTimers.has(gameId.toString())) {
+            console.log(`\n🔔 Game #${gameId} lobby reached 2 players! Starting 30s countdown...`);
+            lobbyTimers.set(gameId.toString(), Date.now());
+        }
+
+        const startTime = lobbyTimers.get(gameId.toString());
+        const elapsed = (Date.now() - startTime) / 1000;
+        const remaining = Math.max(0, Math.ceil(30 - elapsed));
+
+        process.stdout.write(`\r⏳ Lobby #${gameId}: ${remaining}s remaining... (${state.playerCount} players)   `);
+
+        if (elapsed >= 30) {
+            console.log(`\n📢 Lobby countdown finished for Game #${gameId}. Starting now!`);
+            await startGame(gameId);
+            lobbyTimers.delete(gameId.toString());
+        }
         return;
+    } else if (state.isAcceptingPlayers) {
+        // Reset timer if player count falls below 2 (e.g. if someone could leave, though contract might not allow)
+        lobbyTimers.delete(gameId.toString());
     }
 
     // If game is active (not accepting players, not completed)

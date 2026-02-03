@@ -42,6 +42,7 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
         gameState,
         playerState,
         players,
+        lobbyStartTime,
         isLoading,
         error,
         joinGame,
@@ -49,6 +50,25 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
         cashOut,
         claimVictory,
     } = useCashOutOrDie(gameId);
+
+    const [lobbyCountdown, setLobbyCountdown] = useState<number | null>(null);
+
+    // Lobby Countdown Logic
+    useEffect(() => {
+        if (!lobbyStartTime || !gameState?.isAcceptingPlayers) {
+            setLobbyCountdown(null);
+            return;
+        }
+
+        const interval = setInterval(() => {
+            const now = Math.floor(Date.now() / 1000);
+            const elapsed = now - lobbyStartTime;
+            const remaining = Math.max(0, 30 - elapsed);
+            setLobbyCountdown(remaining);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [lobbyStartTime, gameState?.isAcceptingPlayers]);
 
     const { recordResult } = useStreak(address);
     const [lastRecordedGameId, setLastRecordedGameId] = useState<number>(0);
@@ -237,6 +257,30 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                     </div>
                 </div>
             </div>
+
+            {/* Lobby Countdown / Recruitment Warning */}
+            {gameState.isAcceptingPlayers && players.length >= 2 && (
+                <div className={styles.lobbyInfo}>
+                    {lobbyCountdown !== null && (
+                        <div className={styles.lobbyTimer}>
+                            <span className={styles.timerIcon}>⏳</span>
+                            Game starting in <strong>{lobbyCountdown}s</strong>
+                        </div>
+                    )}
+                    {(gameState.totalPool > 0n && (formatEther(gameState.totalPool) === formatEther(gameState.entryFee * BigInt(players.length)))) && (
+                        // This logic is a bit simplified, but basically if entryFee * players == totalPool, 
+                        // it might mean nobody has bet on the OTHER side if we check pools.
+                        // Actually, contract doesn't expose poolA/poolB for CashOut. 
+                        // But we can check if anyone is on Group B vs Group A if we had that data.
+                        // For now, let's just show a general "Invite Opponents" message if players < 4.
+                        players.length < 4 && (
+                            <div className={styles.lobbyWarning}>
+                                ⚠️ Recruit more opponents for a bigger prize!
+                            </div>
+                        )
+                    )}
+                </div>
+            )}
 
             {/* Player Status */}
             {hasJoined && (

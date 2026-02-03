@@ -235,7 +235,12 @@ contract CashOutOrDie is Ownable, ReentrancyGuard {
         emit RoundCompleted(_gameId, game.currentRound, _winningGroup, eliminatedCount);
         
         // Check if game should end (only one player left or everyone eliminated)
-        if (game.activePlayerCount <= 1) {
+        if (game.activePlayerCount == 0) {
+            // House Rescue: If everyone loses, pool goes to house to avoid being trapped
+            collectedFees += game.totalPool;
+            game.totalPool = 0;
+            _endGame(_gameId);
+        } else if (game.activePlayerCount == 1) {
             _endGame(_gameId);
         } else {
             game.currentRound++;

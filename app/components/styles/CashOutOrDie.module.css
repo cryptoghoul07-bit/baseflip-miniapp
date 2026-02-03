@@ -609,3 +609,55 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+}
+
+.lobbyInfo {
+    margin-bottom: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lobbyTimer {
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid var(--neon-cyan);
+    border-radius: var(--border-radius-lg);
+    padding: 16px;
+    text-align: center;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.timerIcon {
+    margin-right: 12px;
+}
+
+.lobbyWarning {
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid #ff6b6b;
+    border-radius: var(--border-radius-md);
+    padding: 12px;
+    text-align: center;
+    font-size: 0.95rem;
+    color: #ff6b6b;
+    font-weight: 600;
+}

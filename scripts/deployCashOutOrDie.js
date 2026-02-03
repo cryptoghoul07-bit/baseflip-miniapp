@@ -17,12 +17,8 @@ async function main() {
     await tx.wait();
     console.log("Game #1 created!");
 
-    console.log("\n========================================");
-    console.log("DEPLOYMENT COMPLETE");
-    console.log("========================================");
-    console.log("Contract Address:", address);
-    console.log("\nAdd this to your .env.local file:");
-    console.log(`NEXT_PUBLIC_CASHOUTORDIE_CONTRACT_ADDRESS=${address}`);
+    const fs = require("fs");
+    fs.writeFileSync("cashout_address.txt", address);
     console.log("========================================");
 }
 

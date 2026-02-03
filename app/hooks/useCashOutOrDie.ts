@@ -33,6 +33,7 @@ export function useCashOutOrDie(gameId: bigint) {
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [playerState, setPlayerState] = useState<PlayerState | null>(null);
     const [players, setPlayers] = useState<string[]>([]);
+    const [lobbyStartTime, setLobbyStartTime] = useState<number>(0);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +76,27 @@ export function useCashOutOrDie(gameId: bigint) {
             }) as string[];
 
             setPlayers(playerList);
+
+            // If 2 or more players joined, fetch the join time of the SECOND player
+            // This is when the 30s recruitment countdown starts in the bot.
+            if (playerList.length >= 2 && game[4]) { // isAcceptingPlayers
+                try {
+                    const secondPlayer = await publicClient.readContract({
+                        address: CONTRACT_ADDRESS,
+                        abi: CashOutOrDieABI,
+                        functionName: 'gamePlayers',
+                        args: [gameId, playerList[1]],
+                    }) as any;
+                    // JoinedAt is the 8th field (index 7) in the Player struct
+                    // Player struct: claimValue, currentChoice, isAlive, hasCashedOut, hasSubmittedChoice, roundsWon, joinedAt
+                    const joinedAt = Number(secondPlayer[6]);
+                    setLobbyStartTime(joinedAt);
+                } catch (e) {
+                    console.error('Error fetching lobby start time:', e);
+                }
+            } else {
+                setLobbyStartTime(0);
+            }
 
         } catch (err) {
             console.error('[CashOutOrDie] Error fetching game state:', err);
@@ -241,6 +263,7 @@ export function useCashOutOrDie(gameId: bigint) {
         gameState,
         playerState,
         players,
+        lobbyStartTime,
         isLoading,
         error,
         joinGame,
