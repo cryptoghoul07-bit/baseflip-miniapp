@@ -162,7 +162,7 @@ export function useUserHistory() {
                                 isCompleted,
                                 isWinner,
                                 timestamp: startTime,
-                                isClaimed: hasCashedOut || (isCompleted && isAlive && claimValue > 0n)
+                                isClaimed: hasCashedOut
                             });
                         }
                     }
@@ -196,5 +196,17 @@ export function useUserHistory() {
         }
     }, [address, syncWithBlockchain]);
 
-    return { history, isLoading, refetchHistory: syncWithBlockchain, recordRoundResult };
+    const claimArenaWinnings = async (gameId: number) => {
+        if (!address || !publicClient || CASHOUT_ADDRESS === '0x0') return;
+        // We'll need a wallet client to send the transaction
+        // Actually, let's use useWriteContract from wagmi here too
+        // But useUserHistory doesn't have it yet. 
+    };
+
+    return {
+        history,
+        isLoading,
+        refetchHistory: syncWithBlockchain,
+        recordRoundResult
+    };
 }

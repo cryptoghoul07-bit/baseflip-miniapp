@@ -267,8 +267,27 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                             <div className={styles.statusText}>
                                 <div className={styles.statusTitle}>ALIVE</div>
                                 <div className={styles.statusDesc}>
-                                    Current Claim: {formatEther(playerState?.claimValue ?? 0n)} ETH
+                                    Claim: {formatEther(playerState?.claimValue ?? 0n)} ETH
                                 </div>
+                            </div>
+                            <div className={styles.statusActions}>
+                                {gameState.isCompleted ? (
+                                    <button
+                                        className={styles.statusClaimButton}
+                                        onClick={claimVictory}
+                                        disabled={isLoading}
+                                    >
+                                        Claim Victory
+                                    </button>
+                                ) : (
+                                    <button
+                                        className={styles.statusCashOutButton}
+                                        onClick={handleCashOut}
+                                        disabled={isLoading}
+                                    >
+                                        Cash Out
+                                    </button>
+                                )}
                             </div>
                         </>
                     )}
@@ -310,7 +329,7 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                             {isLoading ? 'Joining...' : `Join Game (${formatEther(gameState.entryFee)} ETH)`}
                         </button>
                     </div>
-                ) : hasJoined && !isEliminated && !hasCashedOut ? (
+                ) : hasJoined && !isEliminated && !hasCashedOut && !gameState.isCompleted ? (
                     // Submit Choice for Current Round
                     <div className={styles.roundSection}>
                         <h2>Round {gameState.currentRound.toString()}</h2>
