@@ -670,190 +670,113 @@
     font-weight: 600;
 }
 
-/* Arena Gauntlet Ranking */
-.gauntletContainer {
-    background: linear-gradient(180deg, rgba(20, 20, 30, 0.4) 0%, rgba(10, 10, 15, 0.6) 100%);
-    border: 1px solid rgba(0, 82, 255, 0.2);
-    border-radius: var(--border-radius-lg);
-    padding: 24px;
-    margin-bottom: 32px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
-
-.gauntletHeader {
+/* Arena Vertical Progress Bar */
+.arenaMainLayout {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    gap: 24px;
+    align-items: stretch;
+    margin-bottom: 32px;
 }
 
-.gauntletTitle {
-    font-family: var(--font-display);
-    font-size: 0.9rem;
-    letter-spacing: 4px;
-    color: var(--text-muted);
-    font-weight: 800;
-}
-
-.gauntletCount {
-    font-size: 0.8rem;
-    color: var(--neon-cyan);
-    font-weight: 700;
-    text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-}
-
-.gauntletLadder {
+.progressContainer {
+    width: 40px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-}
-
-.gauntletTier {
-    display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px;
-    border-radius: var(--border-radius-md);
-    background: rgba(255, 255, 255, 0.02);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.gauntletTierActive {
-    background: rgba(0, 82, 255, 0.1);
-    border: 1px solid rgba(0, 82, 255, 0.3);
-    transform: translateX(8px);
-    box-shadow: 0 4px 20px rgba(0, 82, 255, 0.15);
-}
-
-.gauntletTierPassed {
-    opacity: 0.5;
-    filter: grayscale(0.5);
-}
-
-.tierInfo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 140px;
-}
-
-.tierIcon {
-    font-size: 1.2rem;
-}
-
-.tierLabel {
-    font-size: 0.85rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    letter-spacing: 1px;
-}
-
-.tierVisual {
-    flex: 1;
-    height: 8px;
+    padding-top: 10px;
     position: relative;
+}
+
+.progressLabel {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 800;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    transform: rotate(180deg);
+}
+
+.progressBarWrapper {
+    flex: 1;
+    width: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    position: relative;
+    min-height: 200px;
+}
+
+.progressBarFill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: var(--gradient-blue);
+    box-shadow: 0 0 15px var(--base-blue-glow);
+    border-radius: 10px;
+    transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.roundMark {
+    position: absolute;
+    left: 50%;
+    transform: translate(-50%, 50%);
+    width: 24px;
+    height: 24px;
+    background: #1a1a1a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
     display: flex;
     align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: all 0.3s ease;
 }
 
-.tierTrack {
-    width: 100%;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 2px;
+.roundMarkActive {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px var(--neon-cyan);
+    background: rgba(0, 82, 255, 0.2);
 }
 
-.gauntletTierActive .tierTrack {
-    background: var(--gradient-blue);
-    box-shadow: 0 0 10px var(--base-blue-glow);
+.roundNumber {
+    font-size: 0.7rem;
+    font-weight: 900;
+    color: var(--text-muted);
 }
 
-.survivorCloud {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
+.roundMarkActive .roundNumber {
+    color: var(--text-primary);
+}
+
+.arenaActionArea {
+    flex: 1;
     display: flex;
-    gap: 4px;
-    width: 100%;
-}
-
-.livingNode {
-    width: 6px;
-    height: 6px;
-    background: var(--neon-cyan);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--neon-cyan);
-    animation: bounce 2s infinite ease-in-out;
-}
-
-@keyframes bounce {
-
-    0%,
-    100% {
-        transform: translateY(0);
-        opacity: 0.6;
-    }
-
-    50% {
-        transform: translateY(-4px);
-        opacity: 1;
-    }
+    flex-direction: column;
+    justify-content: center;
 }
 
 @media (max-width: 768px) {
-    .gauntletContainer {
-        padding: 16px;
+    .arenaMainLayout {
+        gap: 16px;
     }
 
-    .gauntletLadder {
-        flex-direction: row;
-        overflow-x: auto;
-        padding-bottom: 8px;
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+    .progressContainer {
+        width: 30px;
     }
 
-    .gauntletLadder::-webkit-scrollbar {
-        display: none;
-    }
-
-    .gauntletTier {
-        flex-direction: column;
-        min-width: 100px;
-        flex-shrink: 0;
-        text-align: center;
-        gap: 8px;
-    }
-
-    .gauntletTierActive {
-        transform: translateY(-4px);
-    }
-
-    .tierInfo {
-        flex-direction: column;
-        min-width: auto;
-        gap: 4px;
-    }
-
-    .tierLabel {
-        font-size: 0.7rem;
-    }
-
-    .tierVisual {
-        width: 100%;
-        height: 4px;
-    }
-
-    .survivorCloud {
-        justify-content: center;
-        top: -8px;
-    }
-
-    .livingNode {
+    .progressBarWrapper {
         width: 4px;
-        height: 4px;
+        min-height: 180px;
+    }
+
+    .roundMark {
+        width: 20px;
+        height: 20px;
+    }
+
+    .roundNumber {
+        font-size: 0.6rem;
     }
 }

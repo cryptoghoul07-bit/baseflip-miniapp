@@ -9,51 +9,28 @@ import CashOutDecisionModal from './CashOutDecisionModal';
 import CashOutOrDieABI from '../lib/CashOutOrDieABI.json';
 import styles from './styles/CashOutOrDie.module.css';
 
-// Internal component for the tournament ranking ladder
-function ArenaRankingLadder({ survivorsA, survivorsB, currentRound, players }: {
-    survivorsA: number,
-    survivorsB: number,
-    currentRound: number,
-    players: string[]
-}) {
-    const totalSurvivors = survivorsA + survivorsB;
-    const tiers = [
-        { id: 1, label: 'ROUND 1', icon: '⚔️' },
-        { id: 2, label: 'ROUND 2', icon: '🛡️' },
-        { id: 3, label: 'ROUND 3', icon: '🔥' },
-        { id: 4, label: 'SEMI-FINALS', icon: '⚡' },
-        { id: 5, label: 'THE FINALS', icon: '👑' }
-    ];
+// Internal component for the tournament vertical progress bar
+function ArenaProgress({ currentRound }: { currentRound: number }) {
+    const rounds = [1, 2, 3, 4, 5];
+    const progress = Math.min((currentRound / 5) * 100, 100);
 
     return (
-        <div className={styles.gauntletContainer}>
-            <div className={styles.gauntletHeader}>
-                <span className={styles.gauntletTitle}>THE GAUNTLET</span>
-                <span className={styles.gauntletCount}>{totalSurvivors} SURVIVORS</span>
-            </div>
-            <div className={styles.gauntletLadder}>
-                {tiers.map((tier) => {
-                    const isActive = tier.id === currentRound;
-                    const isPassed = tier.id < currentRound;
-                    return (
-                        <div key={tier.id} className={`${styles.gauntletTier} ${isActive ? styles.gauntletTierActive : ''} ${isPassed ? styles.gauntletTierPassed : ''}`}>
-                            <div className={styles.tierInfo}>
-                                <span className={styles.tierIcon}>{tier.icon}</span>
-                                <span className={styles.tierLabel}>{tier.label}</span>
-                            </div>
-                            <div className={styles.tierVisual}>
-                                {isActive && (
-                                    <div className={styles.survivorCloud}>
-                                        {Array.from({ length: Math.min(totalSurvivors, 12) }).map((_, i) => (
-                                            <div key={i} className={styles.livingNode} style={{ animationDelay: `${i * 0.1}s` }} />
-                                        ))}
-                                    </div>
-                                )}
-                                <div className={styles.tierTrack}></div>
-                            </div>
-                        </div>
-                    );
-                })}
+        <div className={styles.progressContainer}>
+            <div className={styles.progressLabel}>ARENA LEVEL</div>
+            <div className={styles.progressBarWrapper}>
+                <div
+                    className={styles.progressBarFill}
+                    style={{ height: `${progress}%` }}
+                />
+                {rounds.map((r) => (
+                    <div
+                        key={r}
+                        className={`${styles.roundMark} ${r <= currentRound ? styles.roundMarkActive : ''}`}
+                        style={{ bottom: `${((r - 1) / 4) * 100}%` }}
+                    >
+                        <span className={styles.roundNumber}>{r === 5 ? '🏆' : r}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -432,29 +409,28 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                             Entry Fee: {formatEther(gameState.entryFee)} ETH
                         </div>
 
-                        <ArenaRankingLadder
-                            players={players}
-                            survivorsA={players.length > 0 ? Math.ceil(players.length / 2) : 0}
-                            survivorsB={players.length > 0 ? Math.floor(players.length / 2) : 0}
-                            currentRound={1}
-                        />
+                        <div className={styles.arenaMainLayout}>
+                            <ArenaProgress currentRound={1} />
 
-                        <div className={styles.choiceButtons}>
-                            <button
-                                className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
-                                onClick={() => setSelectedChoice(1)}
-                            >
-                                <div className={styles.choiceLabel}>GROUP A</div>
-                                <div className={styles.choiceIcon}>🅰️</div>
-                            </button>
+                            <div className={styles.arenaActionArea}>
+                                <div className={styles.choiceButtons}>
+                                    <button
+                                        className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
+                                        onClick={() => setSelectedChoice(1)}
+                                    >
+                                        <div className={styles.choiceLabel}>GROUP A</div>
+                                        <div className={styles.choiceIcon}>🅰️</div>
+                                    </button>
 
-                            <button
-                                className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
-                                onClick={() => setSelectedChoice(2)}
-                            >
-                                <div className={styles.choiceLabel}>GROUP B</div>
-                                <div className={styles.choiceIcon}>🅱️</div>
-                            </button>
+                                    <button
+                                        className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
+                                        onClick={() => setSelectedChoice(2)}
+                                    >
+                                        <div className={styles.choiceLabel}>GROUP B</div>
+                                        <div className={styles.choiceIcon}>🅱️</div>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <button
@@ -470,29 +446,32 @@ export default function CashOutOrDieGame({ onElimination }: CashOutOrDieGameProp
                     <div className={styles.roundSection}>
                         <h2>Round {gameState.currentRound.toString()}</h2>
 
-                        <ArenaRankingLadder
-                            players={players}
-                            survivorsA={gameState?.poolACount ?? 0}
-                            survivorsB={gameState?.poolBCount ?? 0}
-                            currentRound={Number(gameState?.currentRound ?? 1)}
-                        />
+                        <div className={styles.arenaMainLayout}>
+                            <ArenaProgress currentRound={Number(gameState?.currentRound ?? 1)} />
 
-                        <div className={styles.choiceButtons}>
-                            <button
-                                className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
-                                onClick={() => setSelectedChoice(1)}
-                            >
-                                <div className={styles.choiceLabel}>GROUP A</div>
-                                <div className={styles.choiceIcon}>🅰️</div>
-                            </button>
+                            <div className={styles.arenaActionArea}>
+                                <div className={styles.choiceButtons}>
+                                    <button
+                                        className={`${styles.choiceButton} ${styles.groupA} ${selectedChoice === 1 ? styles.selected : ''}`}
+                                        onClick={() => setSelectedChoice(1)}
+                                    >
+                                        <div className={styles.choiceLabel}>GROUP A</div>
+                                        <div className={styles.choiceIcon}>🅰️</div>
+                                    </button>
 
-                            <button
-                                className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
-                                onClick={() => setSelectedChoice(2)}
-                            >
-                                <div className={styles.choiceLabel}>GROUP B</div>
-                                <div className={styles.choiceIcon}>🅱️</div>
-                            </button>
+                                    <button
+                                        className={`${styles.choiceButton} ${styles.groupB} ${selectedChoice === 2 ? styles.selected : ''}`}
+                                        onClick={() => setSelectedChoice(2)}
+                                    >
+                                        <div className={styles.choiceLabel}>GROUP B</div>
+                                        <div className={styles.choiceIcon}>🅱️</div>
+                                    </button>
+                                </div>
+
+                                <div className={styles.roundDesc}>
+                                    Make your prediction. Win or lose it all.
+                                </div>
+                            </div>
                         </div>
 
                         <div className={styles.roundDesc}>
